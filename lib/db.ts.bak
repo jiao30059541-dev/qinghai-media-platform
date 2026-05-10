@@ -1,0 +1,359 @@
+// 更新数据库函数 - 添加缺失的功能
+import mysql from 'mysql2/promise'
+
+// 数据库连接配置
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '3307'),
+  user: process.env.DB_USER || 'ai_ads_user',
+  password: process.env.DB_PASSWORD || 'Qhxn_jjp3864488',
+  database: process.env.DB_NAME || 'ai_ads',
+  charset: "UTF8MB4_UNICODE_CI",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+}
+
+// 创建连接池
+let pool: mysql.Pool | null = null
+
+async function getConnection() {
+  if (!pool) {
+    pool = mysql.createPool(dbConfig)
+  }
+  return pool.getConnection()
+}
+
+export async function query(sql: string, params?: any[]) {
+  const connection = await getConnection()
+  try {
+    // 设置连接字符集
+    await connection.query('SET NAMES utf8mb4')
+    const [results] = await connection.query(sql, params)
+    return results
+  } finally {
+    connection.release()
+  }
+}
+
+// 获取用户信息
+export async function getUserById(id: number) {
+  const sql = 'SELECT * FROM users WHERE id = ?'
+  const results = await query(sql, [id]) as any[]
+  return results[0] || null
+}
+
+// 获取用户通过手机号
+export async function getUserByPhone(phone: string) {
+  const sql = 'SELECT * FROM users WHERE phone = ?'
+  const results = await query(sql, [phone]) as any[]
+  return results[0] || null
+}
+
+// 创建订单（增强版）
+export async function createEnhancedOrder(data: {
+  user_id: number
+  media_ids: number[]
+  industry?: string
+  budget?: number
+  city?: string
+  ai_analysis?: string
+}) {
+  try {
+    // 开始事务
+    await query('START TRANSACTION')
+    
+    // 计算总价
+    const mediaSql = 'SELECT id, deal_price, floor_price FROM media WHERE id IN (?)'
+    const mediaList = await query(mediaSql, [data.media_ids]) as any[]
+    
+    const totalDealPrice = mediaList.reduce((sum, media) => sum + (media.deal_price || 0), 0)
+    const totalFloorPrice = mediaList.reduce((sum, media) => sum + (media.floor_price || 0), 0)
+    
+    // 创建订单
+    const orderSql = `
+      INSERT INTO orders (user_id, total_price, ai_analysis, industry, budget, city, status)
+      VALUES (?, ?, ?, ?, ?, ?, 'pending')
+    `
+    const orderResult: any = await query(orderSql, [
+      data.user_id,
+      totalDealPrice,
+      data.ai_analysis || null,
+      data.industry || null,
+      data.budget || null,
+      data.city || null
+    ])
+    
+    const orderId = orderResult.insertId
+    
+    // 创建订单明细
+    for (const media of mediaList) {
+      const itemSql = `
+        INSERT INTO order_items (order_id, media_id, quoted_price, settlement_price)
+        VALUES (?, ?, ?, ?)
+      `
+      await query(itemSql, [
+        orderId,
+        media.id,
+        media.deal_price,
+        media.floor_price // 初始结算价设为底价
+      ])
+    }
+    
+    // 创建财务记录
+    const financeSql = `
+      INSERT INTO finance (order_id, client_amount, supplier_amount, profit)
+      VALUES (?, ?, ?, ?)
+    `
+    // 客户支付金额 = 成交价 * 1.1（含10%服务费）
+    const clientAmount = totalDealPrice * 1.1
+    const supplierAmount = totalFloorPrice
+    const profit = clientAmount - supplierAmount
+    
+    await query(financeSql, [orderId, clientAmount, supplierAmount, profit])
+    
+    // 提交事务
+    await query('COMMIT')
+    
+    return { 
+      success: true, 
+      order_id: orderId, 
+      total_deal_price: totalDealPrice,
+      total_floor_price: totalFloorPrice,
+      client_amount: clientAmount,
+      supplier_amount: supplierAmount,
+      profit: profit
+    }
+  } catch (error) {
+    await query('ROLLBACK')
+    throw error
+  }
+}
+
+// 获取用户订单
+export async function getUserOrders(userId: number) {
+  const sql = `
+    SELECT o.*, 
+           COUNT(oi.id) as item_count,
+           SUM(oi.quoted_price) as quoted_total
+    FROM orders o
+    LEFT JOIN order_items oi ON o.id = oi.order_id
+    WHERE o.user_id = ?
+    GROUP BY o.id
+    ORDER BY o.created_at DESC
+  `
+  return query(sql, [userId])
+}
+
+// 获取订单详情
+export async function getOrderDetails(orderId: number) {
+  const orderSql = 'SELECT * FROM orders WHERE id = ?'
+  const itemsSql = `
+    SELECT oi.*, m.name, m.city, m.category_level1, m.category_level2
+    FROM order_items oi
+    LEFT JOIN media m ON oi.media_id = m.id
+    WHERE oi.order_id = ?
+  `
+  const financeSql = 'SELECT * FROM finance WHERE order_id = ?'
+  
+  const [order, items, finance] = await Promise.all([
+    query(orderSql, [orderId]) as Promise<any[]>,
+    query(itemsSql, [orderId]) as Promise<any[]>,
+    query(financeSql, [orderId]) as Promise<any[]>
+  ])
+  
+  return {
+    order: order[0] || null,
+    items: items || [],
+    finance: finance[0] || null
+  }
+}
+
+// 更新线索状态（AI判断后）
+export async function updateLeadStatus(leadId: number, aiTag: 'high' | 'medium' | 'low', status: 'new' | 'processed') {
+  const sql = `
+    UPDATE leads 
+    SET ai_tag = ?, status = ?, processed_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `
+  await query(sql, [aiTag, status, leadId])
+  return { success: true }
+}
+
+// 获取统计数据
+export async function getDashboardStats() {
+  const statsSql = `
+    SELECT 
+      (SELECT COUNT(*) FROM users WHERE role = 'client') as total_clients,
+      (SELECT COUNT(*) FROM suppliers WHERE status = 'approved') as total_suppliers,
+      (SELECT COUNT(*) FROM media WHERE status = 'active') as total_media,
+      (SELECT COUNT(*) FROM orders WHERE status = 'confirmed') as total_orders,
+      (SELECT SUM(total_price) FROM orders WHERE status = 'confirmed') as total_revenue
+  `
+  
+  const recentOrdersSql = `
+    SELECT o.*, u.name as client_name
+    FROM orders o
+    LEFT JOIN users u ON o.user_id = u.id
+    ORDER BY o.created_at DESC
+    LIMIT 10
+  `
+  
+  const [stats, recentOrders] = await Promise.all([
+    query(statsSql) as Promise<any[]>,
+    query(recentOrdersSql) as Promise<any[]>
+  ])
+  
+  return {
+    stats: stats[0] || {},
+    recent_orders: recentOrders || []
+  }
+}
+
+// 搜索广告位（支持关键词搜索）
+export async function searchMedia(keyword: string, filters: {
+  city?: string
+  category?: string
+  minPrice?: number
+  maxPrice?: number
+} = {}) {
+  let sql = `
+    SELECT m.*, 
+           GROUP_CONCAT(DISTINCT ma.url) as cover_images,
+           u.company_name as supplier_name
+    FROM media m
+    LEFT JOIN media_assets ma ON m.id = ma.media_id AND ma.type = 'image'
+    LEFT JOIN suppliers s ON m.supplier_id = s.id
+    LEFT JOIN users u ON s.user_id = u.id
+    WHERE m.status = 'active'
+    AND (m.name LIKE ? OR m.address LIKE ? OR m.city LIKE ?)
+  `
+  
+  const params: any[] = [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`]
+  
+  if (filters.city) {
+    sql += ' AND m.city = ?'
+    params.push(filters.city)
+  }
+  
+  if (filters.category) {
+    sql += ' AND (m.category_level1 = ? OR m.category_level2 = ? OR m.category_level3 = ?)'
+    params.push(filters.category, filters.category, filters.category)
+  }
+  
+  if (filters.minPrice !== undefined) {
+    sql += ' AND m.deal_price >= ?'
+    params.push(filters.minPrice)
+  }
+  
+  if (filters.maxPrice !== undefined) {
+    sql += ' AND m.deal_price <= ?'
+    params.push(filters.maxPrice)
+  }
+  
+  sql += ' GROUP BY m.id ORDER BY m.created_at DESC LIMIT 50'
+  
+  return query(sql, params)
+}
+
+// 获取通用媒体列表函数（从原db.ts导出）
+export async function getMediaList(filters: {
+  city?: string
+  category?: string
+  minPrice?: number
+  maxPrice?: number
+}) {
+  let sql = `
+    SELECT m.*, 
+           GROUP_CONCAT(DISTINCT ma.url) as cover_images,
+           COUNT(DISTINCT mp.id) as points_count,
+           u.company_name as supplier_name
+    FROM media m
+    LEFT JOIN media_assets ma ON m.id = ma.media_id AND ma.type = 'image'
+    LEFT JOIN media_points mp ON m.id = mp.media_id
+    LEFT JOIN suppliers s ON m.supplier_id = s.id
+    LEFT JOIN users u ON s.user_id = u.id
+    WHERE m.status = 'active'
+  `
+  
+  const params: any[] = []
+  
+  if (filters.city) {
+    sql += ' AND m.city = ?'
+    params.push(filters.city)
+  }
+  
+  if (filters.category) {
+    sql += ' AND (m.category_level1 = ? OR m.category_level2 = ? OR m.category_level3 = ?)'
+    params.push(filters.category, filters.category, filters.category)
+  }
+  
+  if (filters.minPrice !== undefined) {
+    sql += ' AND m.deal_price >= ?'
+    params.push(filters.minPrice)
+  }
+  
+  if (filters.maxPrice !== undefined) {
+    sql += ' AND m.deal_price <= ?'
+    params.push(filters.maxPrice)
+  }
+  
+  sql += ' GROUP BY m.id ORDER BY m.created_at DESC LIMIT 50'
+  
+  return query(sql, params)
+}
+
+// 获取单个媒体详情
+export async function getMediaById(id: number) {
+  const sql = `
+    SELECT m.*, 
+           u.company_name as supplier_name,
+           s.license_url,
+           s.authorization_url
+    FROM media m
+    LEFT JOIN suppliers s ON m.supplier_id = s.id
+    LEFT JOIN users u ON s.user_id = u.id
+    WHERE m.id = ? AND m.status = 'active'
+  `
+  
+  const results = await query(sql, [id]) as any[]
+  return results[0] || null
+}
+
+// 获取媒体素材
+export async function getMediaAssets(mediaId: number) {
+  const sql = `
+    SELECT * FROM media_assets 
+    WHERE media_id = ? 
+    ORDER BY type
+  `
+  return query(sql, [mediaId])
+}
+
+// 获取媒体点位
+export async function getMediaPoints(mediaId: number) {
+  const sql = 'SELECT * FROM media_points WHERE media_id = ?'
+  return query(sql, [mediaId])
+}
+
+// 获取城市列表
+export async function getCities() {
+  const sql = "SELECT DISTINCT city FROM media WHERE status = 'active' ORDER BY city"
+  return query(sql)
+}
+
+// 获取分类列表
+export async function getCategories() {
+  const sql = `
+    SELECT DISTINCT category_level1 as name FROM media 
+    WHERE status = 'active' 
+    UNION
+    SELECT DISTINCT category_level2 FROM media 
+    WHERE status = 'active' AND category_level2 IS NOT NULL
+    UNION  
+    SELECT DISTINCT category_level3 FROM media 
+    WHERE status = 'active' AND category_level3 IS NOT NULL
+  `
+  return query(sql)
+}
+

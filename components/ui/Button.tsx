@@ -1,0 +1,87 @@
+// components/ui/ButtonFixed.tsx - 修复版本
+'use client'
+
+import { ReactNode, forwardRef } from 'react'
+import { cn } from '@/lib/utils'
+import { Loader2 } from 'lucide-react'
+
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+  loading?: boolean
+  disabled?: boolean
+  fullWidth?: boolean
+  leftIcon?: ReactNode
+  rightIcon?: ReactNode
+  children: ReactNode
+}
+
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    {
+      variant = 'primary',
+      size = 'md',
+      loading = false,
+      disabled = false,
+      fullWidth = false,
+      leftIcon,
+      rightIcon,
+      children,
+      className,
+      ...props
+    },
+    ref
+  ) => {
+    const isDisabled = disabled || loading
+    
+    const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+    
+    const variants = {
+      primary: 'bg-primary text-white hover:bg-primary/90 focus:ring-primary active:bg-primary/80',
+      secondary: 'bg-secondary text-white hover:bg-secondary/90 focus:ring-secondary active:bg-secondary/80',
+      outline: 'border-2 border-primary text-primary hover:bg-primary/5 focus:ring-primary active:bg-primary/10',
+      ghost: 'text-primary hover:bg-primary/10 focus:ring-primary active:bg-primary/20',
+      danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 active:bg-red-700'
+    }
+    
+    const sizes = {
+      sm: 'px-3 py-1.5 text-sm rounded-lg',
+      md: 'px-4 py-2.5 text-base rounded-xl',
+      lg: 'px-6 py-3 text-lg rounded-xl',
+      xl: 'px-8 py-4 text-xl rounded-xl'
+    }
+    
+    return (
+      <button
+        ref={ref}
+        disabled={isDisabled}
+        className={cn(
+          baseStyles,
+          variants[variant],
+          sizes[size],
+          fullWidth && 'w-full',
+          className
+        )}
+        {...props}
+      >
+        {loading && (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        )}
+        
+        {!loading && leftIcon && (
+          <span className="mr-2">{leftIcon}</span>
+        )}
+        
+        {children}
+        
+        {!loading && rightIcon && (
+          <span className="ml-2">{rightIcon}</span>
+        )}
+      </button>
+    )
+  }
+)
+
+Button.displayName = 'Button'
+
+export { Button }

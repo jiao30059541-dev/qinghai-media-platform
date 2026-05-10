@@ -1,0 +1,390 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { getUserIdFromToken } from '@/lib/auth';
+
+// 推荐类型
+type RecommendationType = 'collaborative' | 'content' | 'popular' | 'personalized' | 'all';
+
+// 推荐请求参数
+interface RecommendationRequest {
+  type?: RecommendationType;
+  limit?: number;
+  category?: string;
+  city?: string;
+  price_range?: string;
+}
+
+// 推荐响应
+interface RecommendationItem {
+  media_id: number;
+  name: string;
+  category_level1: string;
+  category_level2: string;
+  city: string;
+  list_price: number;
+  deal_price: number;
+  size: string;
+  daily_exposure: number;
+  recommendation_type: RecommendationType;
+  recommendation_score: number;
+  reason: string;
+  image_url?: string;
+}
+
+// 获取推荐列表
+export async function GET(request: NextRequest) {
+  try {
+    // 获取用户身份（可选，未登录也可获取推荐）
+    const userId = await getUserIdFromToken(request) || 0;
+
+    // 解析查询参数
+    const searchParams = request.nextUrl.searchParams;
+    const type = searchParams.get('type') as RecommendationType || 'all';
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const category = searchParams.get('category');
+    const city = searchParams.get('city');
+    const price_range = searchParams.get('price_range');
+
+    let recommendations: RecommendationItem[] = [];
+
+    if (type === 'all' || type === 'personalized') {
+      // 获取个性化推荐（从缓存）
+      const personalizedRows = await query(
+        `SELECT rc.media_id, rc.recommendation_type, rc.recommendation_score, rc.reason,
+                m.name, m.category_level1, m.category_level2, m.city, 
+                m.list_price, m.deal_price, m.size, m.daily_exposure
+         FROM recommendation_cache rc
+         JOIN media m ON rc.media_id = m.id
+         WHERE rc.user_id = ? 
+           AND rc.recommendation_type IN ('personalized', 'collaborative', 'content')
+           AND rc.expires_at > NOW()
+           AND m.status = 'active'
+         ORDER BY rc.recommendation_score DESC
+         LIMIT ?`,
+        [userId, limit]
+      ) as any[];
+
+      recommendations.push(...personalizedRows);
+    }
+
+    if (type === 'all' || type === 'popular') {
+      // 获取热门推荐
+      const popularRows = await query(
+        `SELECT m.id as media_id, 'popular' as recommendation_type, 
+                (COUNT(DISTINCT ub.user_id) * 0.5 + AVG(COALESCE(ub.behavior_weight, 0.2)) * 0.3 + LOG(COALESCE(m.daily_exposure, 1)) * 0.2) as recommendation_score,
+                '近期热门广告位' as reason,
+                m.name, m.category_level1, m.category_level2, m.city,
+                m.list_price, m.deal_price, m.size, m.daily_exposure
+         FROM media m
+         LEFT JOIN user_behaviors ub ON m.id = ub.media_id AND ub.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+         WHERE m.status = 'active'
+           AND NOT EXISTS (
+             SELECT 1 FROM user_behaviors ub2 
+             WHERE ub2.user_id = ? AND ub2.media_id = m.id
+           )
+         GROUP BY m.id
+         ORDER BY recommendation_score DESC
+         LIMIT ?`,
+        [userId, limit]
+      ) as any[];
+
+      recommendations.push(...popularRows);
+    }
+
+    // 如果没有推荐，返回基于内容的推荐
+    if (recommendations.length === 0) {
+      const contentRows = await query(
+        `SELECT m.id as media_id, 'content' as recommendation_type, 
+                RAND() * 0.5 + 0.5 as recommendation_score,
+                '优质广告位推荐' as reason,
+                m.name, m.category_level1, m.category_level2, m.city,
+                m.list_price, m.deal_price, m.size, m.daily_exposure
+         FROM media m
+         WHERE m.status = 'active'
+           AND (? IS NULL OR m.category_level1 = ?)
+           AND (? IS NULL OR m.city = ?)
+         ORDER BY m.daily_exposure DESC, m.list_price ASC
+         LIMIT ?`,
+        [category, category, city, city, limit]
+      ) as any[];
+
+      recommendations.push(...contentRows);
+    }
+
+    // 去重并按分数排序
+    const uniqueRecommendations = Array.from(
+      new Map(recommendations.map(item => [item.media_id, item])).values()
+    )
+    .sort((a, b) => b.recommendation_score - a.recommendation_score)
+    .slice(0, limit);
+
+    // 添加图片URL
+    const recommendationsWithImages = await Promise.all(
+      uniqueRecommendations.map(async (item) => {
+        // 获取媒体图片
+        const images = await query(
+          `SELECT url FROM media_assets 
+           WHERE media_id = ? AND type = 'image'
+           LIMIT 1`,
+          [item.media_id]
+        ) as any[];
+
+        return {
+          ...item,
+          image_url: images.length > 0 ? images[0].url : '/images/default-media.jpg'
+        };
+      })
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: recommendationsWithImages,
+      count: recommendationsWithImages.length,
+      type,
+      user_id: userId
+    });
+
+  } catch (error: any) {
+    console.error('推荐系统错误:', error);
+    return NextResponse.json(
+      { error: '获取推荐失败', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// 跟踪用户行为
+export async function POST(request: NextRequest) {
+  try {
+    const userId = await getUserIdFromToken(request);
+    if (!userId) {
+      return NextResponse.json(
+        { error: '未授权访问' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const {
+      media_id,
+      behavior_type = 'view',
+      duration_seconds = 0,
+      session_id,
+      referrer_url,
+      device_type,
+      user_agent,
+      ip_address
+    } = body;
+
+    if (!media_id) {
+      return NextResponse.json(
+        { error: '缺少媒体ID' },
+        { status: 400 }
+      );
+    }
+
+    // 验证行为类型
+    const validBehaviors = ['view', 'click', 'favorite', 'add_to_cart', 'purchase'];
+    if (!validBehaviors.includes(behavior_type)) {
+      return NextResponse.json(
+        { error: '无效的行为类型' },
+        { status: 400 }
+      );
+    }
+
+    // 行为权重映射
+    const behaviorWeights = {
+      'view': 0.2,
+      'click': 0.5,
+      'favorite': 0.8,
+      'add_to_cart': 1.0,
+      'purchase': 1.5
+    };
+
+    const behavior_weight = behaviorWeights[behavior_type] || 1.0;
+
+    // 插入用户行为记录
+    await query(
+      `INSERT INTO user_behaviors 
+       (user_id, media_id, behavior_type, behavior_weight, session_id, 
+        duration_seconds, referrer_url, device_type, user_agent, ip_address)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId, media_id, behavior_type, behavior_weight, session_id,
+        duration_seconds, referrer_url, device_type, user_agent, ip_address
+      ]
+    );
+
+    // 更新用户兴趣
+    await updateUserInterests(userId);
+
+    // 生成新的推荐
+    await generateRecommendations(userId, 10);
+
+    return NextResponse.json({
+      success: true,
+      message: '行为记录成功',
+      behavior_type,
+      media_id,
+      user_id: userId
+    });
+
+  } catch (error: any) {
+    console.error('行为跟踪错误:', error);
+    return NextResponse.json(
+      { error: '行为跟踪失败', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// 更新用户兴趣
+async function updateUserInterests(userId: number) {
+  try {
+    // 基于用户行为更新兴趣标签
+    await query(
+      `INSERT INTO user_interests (user_id, category_level1, category_level2, city, price_range, interest_score)
+       SELECT 
+         ub.user_id,
+         m.category_level1,
+         m.category_level2,
+         m.city,
+         CASE 
+           WHEN m.list_price < 5000 THEN 'low'
+           WHEN m.list_price BETWEEN 5000 AND 20000 THEN 'medium'
+           ELSE 'high'
+         END as price_range,
+         SUM(ub.behavior_weight * LOG(1 + ub.duration_seconds/60)) / COUNT(DISTINCT ub.media_id) as calculated_score
+       FROM user_behaviors ub
+       JOIN media m ON ub.media_id = m.id
+       WHERE ub.user_id = ?
+         AND ub.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+       GROUP BY ub.user_id, m.category_level1, m.category_level2, m.city, price_range
+       ON DUPLICATE KEY UPDATE 
+         interest_score = VALUES(interest_score),
+         last_updated = NOW()`,
+      [userId]
+    );
+  } catch (error) {
+    console.error('更新用户兴趣错误:', error);
+  }
+}
+
+// 生成推荐
+async function generateRecommendations(userId: number, limit: number) {
+  try {
+    // 删除过期缓存
+    await query(
+      `DELETE FROM recommendation_cache 
+       WHERE user_id = ? AND expires_at < NOW()`,
+      [userId]
+    );
+
+    // 基于协同过滤的推荐
+    await query(
+      `INSERT IGNORE INTO recommendation_cache (user_id, media_id, recommendation_type, recommendation_score, reason, expires_at)
+       SELECT 
+         ?,
+         ub2.media_id,
+         'collaborative',
+         COUNT(DISTINCT ub2.user_id) * 0.1 + AVG(ub2.behavior_weight) as score,
+         '与您相似的用户也浏览了',
+         DATE_ADD(NOW(), INTERVAL 1 HOUR)
+       FROM user_behaviors ub1
+       JOIN user_behaviors ub2 ON ub1.media_id = ub2.media_id AND ub1.user_id != ub2.user_id
+       WHERE ub1.user_id = ?
+         AND ub2.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+         AND NOT EXISTS (
+           SELECT 1 FROM user_behaviors ub3 
+           WHERE ub3.user_id = ? AND ub3.media_id = ub2.media_id
+         )
+       GROUP BY ub2.media_id
+       HAVING COUNT(DISTINCT ub2.user_id) >= 1
+       ORDER BY score DESC
+       LIMIT ?`,
+      [userId, userId, userId, limit]
+    );
+
+    // 基于内容的推荐
+    await query(
+      `INSERT IGNORE INTO recommendation_cache (user_id, media_id, recommendation_type, recommendation_score, reason, expires_at)
+       SELECT 
+         ?,
+         ms.media_id2,
+         'content',
+         ms.similarity_score * 0.8 + COALESCE(ub.behavior_weight, 0.2) * 0.2 as score,
+         '与您浏览过的广告位相似',
+         DATE_ADD(NOW(), INTERVAL 1 HOUR)
+       FROM user_behaviors ub
+       JOIN media_similarities ms ON ub.media_id = ms.media_id1
+       WHERE ub.user_id = ?
+         AND ub.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+         AND NOT EXISTS (
+           SELECT 1 FROM user_behaviors ub2 
+           WHERE ub2.user_id = ? AND ub2.media_id = ms.media_id2
+         )
+       ORDER BY ub.created_at DESC, ms.similarity_score DESC
+       LIMIT ?`,
+      [userId, userId, userId, limit]
+    );
+
+    // 基于用户兴趣的推荐
+    await query(
+      `INSERT IGNORE INTO recommendation_cache (user_id, media_id, recommendation_type, recommendation_score, reason, expires_at)
+       SELECT 
+         ?,
+         m.id,
+         'personalized',
+         ui.interest_score * 0.7 + 
+         CASE 
+           WHEN m.city = ui.city THEN 0.2
+           WHEN m.category_level1 = ui.category_level1 AND m.category_level2 = ui.category_level2 THEN 0.3
+           ELSE 0.1
+         END as score,
+         '符合您的兴趣偏好',
+         DATE_ADD(NOW(), INTERVAL 1 HOUR)
+       FROM user_interests ui
+       JOIN media m ON (
+         m.category_level1 = ui.category_level1 
+         AND (ui.category_level2 IS NULL OR m.category_level2 = ui.category_level2)
+         AND (ui.city IS NULL OR m.city = ui.city)
+         AND m.status = 'active'
+       )
+       WHERE ui.user_id = ?
+         AND ui.interest_score > 0.3
+         AND NOT EXISTS (
+           SELECT 1 FROM user_behaviors ub 
+           WHERE ub.user_id = ? AND ub.media_id = m.id
+         )
+       ORDER BY ui.interest_score DESC, m.daily_exposure DESC
+       LIMIT ?`,
+      [userId, userId, userId, limit]
+    );
+
+    // 热门推荐
+    await query(
+      `INSERT IGNORE INTO recommendation_cache (user_id, media_id, recommendation_type, recommendation_score, reason, expires_at)
+       SELECT 
+         ?,
+         m.id,
+         'popular',
+         (COUNT(DISTINCT ub.user_id) * 0.5 + AVG(ub.behavior_weight) * 0.3 + LOG(COALESCE(m.daily_exposure, 1)) * 0.2) as score,
+         '近期热门广告位',
+         DATE_ADD(NOW(), INTERVAL 1 HOUR)
+       FROM media m
+       LEFT JOIN user_behaviors ub ON m.id = ub.media_id AND ub.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+       WHERE m.status = 'active'
+         AND NOT EXISTS (
+           SELECT 1 FROM user_behaviors ub2 
+           WHERE ub2.user_id = ? AND ub2.media_id = m.id
+         )
+       GROUP BY m.id
+       ORDER BY score DESC
+       LIMIT ?`,
+      [userId, userId, limit]
+    );
+
+  } catch (error) {
+    console.error('生成推荐错误:', error);
+  }
+}

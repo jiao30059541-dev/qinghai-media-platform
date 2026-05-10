@@ -1,0 +1,264 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Trash2, Plus, MessageSquare, FileText, Calculator, Target, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+
+export default function PlanPage() {
+  const router = useRouter()
+  const [selectedMedia, setSelectedMedia] = useState<any[]>([])
+  const [budget, setBudget] = useState<string>('')
+  const [industry, setIndustry] = useState<string>('')
+  const [city, setCity] = useState<string>('')
+  const [showAIForm, setShowAIForm] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<string>('')
+
+  // 从本地存储加载已选广告位
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('adPlan') || '[]')
+      setSelectedMedia(saved)
+    } catch {}
+  }, [])
+
+  // 保存到本地存储
+  const saveToLocalStorage = (items: any[]) => {
+    try {
+      localStorage.setItem('adPlan', JSON.stringify(items))
+    } catch {}
+  }
+
+  const totalPrice = selectedMedia.reduce((sum, media) => sum + (media.deal_price || 0), 0)
+  const totalExposure = selectedMedia.reduce((sum, media) => sum + (media.daily_exposure || 0), 0)
+
+  const removeMedia = (id: number) => {
+    const updated = selectedMedia.filter(media => media.id !== id)
+    setSelectedMedia(updated)
+    saveToLocalStorage(updated)
+  }
+
+  const generateAIPlan = async () => {
+    if (!budget || !industry || !city) {
+      alert('\u8bf7\u586b\u5199\u9884\u7b97\u3001\u884c\u4e1a\u548c\u57ce\u5e02\u4fe1\u606f')
+      return
+    }
+    setAiLoading(true)
+    setAiResult('')
+    try {
+      const res = await fetch('/api/ai/plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mediaItems: selectedMedia,
+          budget: parseInt(budget),
+          industry,
+          city
+        })
+      })
+      const json = await res.json()
+      if (json.success) {
+        setAiResult(json.data?.analysis || json.data?.content || JSON.stringify(json.data, null, 2))
+      } else {
+        throw new Error(json.message || '获取数据失败')
+      }
+    } catch (error: any) {
+      alert('AI\u65b9\u6848\u751f\u6210\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const submitRequirement = () => {
+    if (selectedMedia.length === 0) {
+      alert('\u8bf7\u81f3\u5c11\u9009\u62e9\u4e00\u4e2a\u5e7f\u544a\u4f4d')
+      return
+    }
+    alert(`\u9700\u6c42\u63d0\u4ea4\u6210\u529f\uff01\n\n\u5df2\u9009\u5e7f\u544a\u4f4d\uff1a${selectedMedia.length}\u4e2a\n\u603b\u4ef7\uff1a\u00a5${totalPrice.toLocaleString()}\n\n\u6211\u4eec\u7684\u5ba2\u670d\u5c06\u572824\u5c0f\u65f6\u5185\u8054\u7cfb\u60a8\u786e\u8ba4\u7ec6\u8282\u3002`)
+  }
+
+  const browseMore = () => {
+    router.push('/media')
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-gradient-to-r from-primary to-blue-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h1 className="text-4xl font-bold mb-4">{'\u6295\u653e\u65b9\u6848'}</h1>
+          <p className="text-xl opacity-90 max-w-3xl">{'\u7ba1\u7406\u60a8\u7684\u5e7f\u544a\u6295\u653e\u7ec4\u5408\uff0c\u751f\u6210AI\u667a\u80fd\u65b9\u6848\uff0c\u4e00\u952e\u63d0\u4ea4\u9700\u6c42'}</p>
+        </div>
+      </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                  <Target className="w-6 h-6 mr-2" />
+                  {'\u5df2\u9009\u5e7f\u544a\u4f4d'} ({selectedMedia.length})
+                </h2>
+                <button onClick={browseMore} className="flex items-center text-primary hover:text-blue-700">
+                  <Plus className="w-5 h-5 mr-1" />
+                  {'\u6dfb\u52a0\u66f4\u591a\u5e7f\u544a\u4f4d'}
+                </button>
+              </div>
+              {selectedMedia.length > 0 ? (
+                <>
+                  <div className="space-y-4 mb-6">
+                    {selectedMedia.map((media) => (
+                      <div key={media.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <div className="flex items-center">
+                          <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mr-4">
+                            <div className="text-2xl">{media.category_level1 === '\u6237\u5916\u5e7f\u544a' ? '\U0001f3d9\U0000fe0f' : media.category_level1 === '\u793e\u533a\u5e7f\u544a' ? '\U0001f3d8\U0000fe0f' : '\U0001f3aa'}</div>
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900">{media.name}</h3>
+                            <p className="text-sm text-gray-600">{media.city} {'\u00b7'} {media.category_level2}</p>
+                            <div className="flex items-center space-x-4 mt-1">
+                              <span className="text-sm text-gray-500">{'\u5c3a\u5bf8'}: {media.size}</span>
+                              <span className="text-sm text-gray-500">{'\u66dd\u5149'}: {media.daily_exposure?.toLocaleString()}{'\u6b21/\u65e5'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-primary">{'\u00a5'}{media.deal_price?.toLocaleString()}</div>
+                            {media.list_price > 0 && <div className="text-sm text-gray-400 line-through">{'\u00a5'}{media.list_price.toLocaleString()}</div>}
+                          </div>
+                          <button onClick={() => removeMedia(media.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" aria-label="\u79fb\u9664">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-sm text-blue-700 mb-1">{'\u5e7f\u544a\u4f4d\u6570\u91cf'}</div>
+                      <div className="text-2xl font-bold text-blue-800">{selectedMedia.length} {'\u4e2a'}</div>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="text-sm text-green-700 mb-1">{'\u603b\u66dd\u5149\u91cf'}</div>
+                      <div className="text-2xl font-bold text-green-800">{totalExposure.toLocaleString()} {'\u6b21/\u65e5'}</div>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <div className="text-sm text-purple-700 mb-1">{'\u8986\u76d6\u57ce\u5e02'}</div>
+                      <div className="text-2xl font-bold text-purple-800">{Array.from(new Set(selectedMedia.map(m => m.city))).length} {'\u4e2a'}</div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="text-5xl mb-4">{'\U0001f6d2'}</div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{'\u6295\u653e\u65b9\u6848\u4e3a\u7a7a'}</h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">{'\u60a8\u8fd8\u6ca1\u6709\u6dfb\u52a0\u4efb\u4f55\u5e7f\u544a\u4f4d\u5230\u6295\u653e\u65b9\u6848\u3002\u6d4f\u89c8\u5e7f\u544a\u8d44\u6e90\u5e93\uff0c\u9009\u62e9\u9002\u5408\u7684\u5e7f\u544a\u4f4d\u5f00\u59cb\u521b\u5efa\u60a8\u7684\u6295\u653e\u8ba1\u5212\u3002'}</p>
+                  <button onClick={browseMore} className="inline-flex items-center px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <Plus className="w-5 h-5 mr-2" />
+                    {'\u6d4f\u89c8\u5e7f\u544a\u8d44\u6e90'}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                  <MessageSquare className="w-6 h-6 mr-2" />
+                  AI{'\u667a\u80fd\u6295\u653e\u65b9\u6848'}
+                </h2>
+                <button onClick={() => setShowAIForm(!showAIForm)} className="text-sm text-primary hover:text-blue-700">
+                  {showAIForm ? '\u6536\u8d77' : '\u5c55\u5f00'}
+                </button>
+              </div>
+              {showAIForm && (
+                <div className="mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">{'\u6295\u653e\u884c\u4e1a'}</label>
+                      <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">{'\u9009\u62e9\u884c\u4e1a'}</option>
+                        <option value="\u9910\u996e">{'\u9910\u996e'}</option>
+                        <option value="\u623f\u5730\u4ea7">{'\u623f\u5730\u4ea7'}</option>
+                        <option value="\u6c7d\u8f66">{'\u6c7d\u8f66'}</option>
+                        <option value="\u6559\u80b2">{'\u6559\u80b2'}</option>
+                        <option value="\u533b\u7597">{'\u533b\u7597'}</option>
+                        <option value="\u96f6\u552e">{'\u96f6\u552e'}</option>
+                        <option value="\u65c5\u6e38">{'\u65c5\u6e38'}</option>
+                        <option value="\u91d1\u878d">{'\u91d1\u878d'}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">{'\u6295\u653e\u9884\u7b97'} (\u5143)</label>
+                      <input type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="\u4f8b\u5982\uff1a50000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">{'\u4e3b\u8981\u6295\u653e\u57ce\u5e02'}</label>
+                      <select value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">{'\u9009\u62e9\u57ce\u5e02'}</option>
+                        <option value="\u897f\u5b81">{'\u897f\u5b81'}</option>
+                        <option value="\u6d77\u4e1c">{'\u6d77\u4e1c'}</option>
+                        <option value="\u683c\u5c14\u6728">{'\u683c\u5c14\u6728'}</option>
+                        <option value="\u5fb7\u4ee4\u54c8">{'\u5fb7\u4ee4\u54c8'}</option>
+                        <option value="\u7389\u6811">{'\u7389\u6811'}</option>
+                        <option value="\u5168\u7701">{'\u5168\u7701\u8986\u76d6'}</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button onClick={generateAIPlan} disabled={aiLoading || !budget || !industry || !city}
+                    className={`w-full py-3 px-6 rounded-lg font-bold flex items-center justify-center ${aiLoading || !budget || !industry || !city ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-primary to-blue-600 hover:from-blue-700 hover:to-blue-800 text-white'}`}>
+                    {aiLoading ? (
+                      <><Loader2 className="w-5 h-5 animate-spin mr-2" />{'\u6b63\u5728\u751f\u6210AI\u65b9\u6848...'}</>
+                    ) : (
+                      <><MessageSquare className="w-5 h-5 mr-2" />{'\u751f\u6210AI\u6295\u653e\u65b9\u6848'}</>
+                    )}
+                  </button>
+                </div>
+              )}
+              {aiResult && (
+                <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-900">AI{'\u65b9\u6848\u7ed3\u679c'}</h3>
+                    <button onClick={() => navigator.clipboard.writeText(aiResult)} className="text-sm text-primary hover:text-blue-700">{'\u590d\u5236\u65b9\u6848'}</button>
+                  </div>
+                  <pre className="whitespace-pre-wrap text-gray-800 bg-white/50 p-4 rounded-lg">{aiResult}</pre>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="lg:col-span-1">
+            <div className="sticky top-6 space-y-6">
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                  <Calculator className="w-6 h-6 mr-2" />
+                  {'\u4ef7\u683c\u603b\u7ed3'}
+                </h3>
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">{'\u5e7f\u544a\u4f4d\u603b\u4ef7'}</span>
+                    <span className="text-lg font-medium">{'\u00a5'}{totalPrice.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">{'\u5e73\u53f0\u670d\u52a1\u8d39'}</span>
+                    <span className="text-lg font-medium">{'\u00a5'}{Math.round(totalPrice * 0.1).toLocaleString()}</span>
+                  </div>
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xl font-bold text-gray-900">{'\u9884\u4f30\u603b\u4ef7'}</span>
+                      <span className="text-3xl font-bold text-primary">{'\u00a5'}{Math.round(totalPrice * 1.1).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <button onClick={submitRequirement} disabled={selectedMedia.length === 0}
+                  className={`w-full py-4 px-6 rounded-lg font-bold text-lg mb-4 ${selectedMedia.length === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'}`}>
+                  <FileText className="inline-block w-6 h-6 mr-2" />
+                  {'\u63d0\u4ea4\u6295\u653e\u9700\u6c42'}
+                </button>
+                <p className="text-center text-gray-600 text-sm">{'\u63d0\u4ea4\u540e\uff0c\u4e13\u4e1a\u5ba2\u670d\u5c06\u572824\u5c0f\u65f6\u5185\u8054\u7cfb\u60a8\u786e\u8ba4\u7ec6\u8282'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

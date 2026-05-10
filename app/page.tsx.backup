@@ -1,0 +1,210 @@
+import Link from 'next/link'
+import CategoryGrid from '@/components/CategoryGrid'
+import CitySelector from '@/components/CitySelector'
+import MediaCard from '@/components/MediaCard'
+import { getMediaList } from '@/lib/db'
+
+// 分类数据
+const categories = [
+  { id: 1, name: '户外广告', icon: '🏙️', count: 128, description: 'LED大屏、高炮、墙体等' },
+  { id: 2, name: '社区广告', icon: '🏘️', count: 56, description: '电梯、门禁、道闸等' },
+  { id: 3, name: '商业广告', icon: '🏬', count: 42, description: '商场、写字楼、酒店等' },
+  { id: 4, name: '数字广告', icon: '📱', count: 89, description: '移动端、社交媒体等' },
+  { id: 5, name: '交通广告', icon: '🚗', count: 73, description: '公交、地铁、出租车等' },
+  { id: 6, name: '活动广告', icon: '🎪', count: 31, description: '展会、赛事、节庆等' },
+]
+
+export default async function Home() {
+  // 获取推荐广告位
+  const mediaList = await getMediaList({}) as any[]
+
+  return (
+    <div className="min-h-screen">
+      {/* 全屏视频/背景区域 */}
+      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-secondary/80"></div>
+          <div 
+            className="absolute inset-0 bg-cover bg-center opacity-30"
+            style={{ backgroundImage: 'url(/hero-bg.jpg)' }}
+          ></div>
+        </div>
+        
+        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 animate-fadeIn">
+            青海全媒体广告
+            <span className="block text-4xl md:text-6xl mt-2">智能投放平台</span>
+          </h1>
+          <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto">
+            AI驱动的广告资源智能匹配，覆盖青海全域户外广告资源，为企业提供一站式投放解决方案
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              href="/ai-chat" 
+              className="px-8 py-4 bg-white text-primary font-bold rounded-lg hover:bg-gray-100 transition-all text-lg shadow-lg"
+            >
+              🤖 免费获取AI投放方案
+            </Link>
+            <Link 
+              href="/media" 
+              className="px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-lg hover:bg-white/10 transition-all text-lg"
+            >
+              🔍 浏览广告资源
+            </Link>
+          </div>
+        </div>
+        
+        <div className="absolute bottom-10 left-0 right-0 text-center">
+          <div className="animate-bounce text-white text-2xl">↓</div>
+        </div>
+      </section>
+
+      {/* 分类入口 */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">六大广告资源分类</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              覆盖青海全域各类广告媒体资源，满足不同行业、不同预算的投放需求
+            </p>
+          </div>
+          
+          <CategoryGrid categories={categories} />
+        </div>
+      </section>
+
+      {/* 城市入口 + AI投放方案入口 */}
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* 城市选择 */}
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">🌆 选择投放城市</h3>
+              <p className="text-gray-600 mb-6">
+                精准定位目标市场，选择您要投放广告的城市
+              </p>
+              <CitySelector />
+              <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+                <p className="text-blue-800">
+                  <span className="font-semibold">热门城市:</span> 西宁、海东、格尔木、德令哈、玉树
+                </p>
+              </div>
+            </div>
+            
+            {/* AI投放方案 */}
+            <div className="bg-gradient-to-br from-primary to-blue-600 rounded-2xl shadow-xl p-8 text-white">
+              <h3 className="text-2xl font-bold mb-6">🚀 AI智能投放方案</h3>
+              <p className="mb-6 opacity-90">
+                输入您的行业、预算和需求，AI将为您生成专业的投放策略
+              </p>
+              
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">1</div>
+                  <span>分析行业特性与目标受众</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">2</div>
+                  <span>匹配最佳广告媒体组合</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">3</div>
+                  <span>生成预算分配与效果预估</span>
+                </div>
+              </div>
+              
+              <Link 
+                href="/ai-chat" 
+                className="inline-block w-full text-center px-6 py-4 bg-white text-primary font-bold rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                免费获取AI投放方案 →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 推荐广告位 */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900">🔥 热门推荐广告位</h2>
+              <p className="text-gray-600 mt-2">精选优质广告资源，高曝光高转化</p>
+            </div>
+            <Link 
+              href="/media" 
+              className="text-primary hover:text-blue-700 font-semibold"
+            >
+              查看全部 →
+            </Link>
+          </div>
+          
+          {mediaList && mediaList.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {mediaList.slice(0, 6).map((media: any) => (
+                <MediaCard key={media.id} media={media} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">暂无广告资源数据</p>
+            </div>
+          )}
+          
+          {/* 价格提示 */}
+          <div className="mt-12 p-6 bg-yellow-50 border border-yellow-200 rounded-xl">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 text-2xl">💰</div>
+              <div className="ml-4">
+                <h4 className="font-semibold text-yellow-800">价格透明政策</h4>
+                <p className="text-yellow-700 mt-1">
+                  未登录显示刊例价，登录后显示折扣范围，提交方案后显示预估价
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 平台优势 */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">平台核心优势</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              为什么选择青海全媒体广告平台
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <div className="text-4xl mb-4">🤖</div>
+              <h3 className="text-xl font-bold mb-3">AI智能控盘</h3>
+              <p className="text-gray-600">
+                智能匹配广告资源，AI生成投放方案，数据驱动的决策支持
+              </p>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <div className="text-4xl mb-4">📊</div>
+              <h3 className="text-xl font-bold mb-3">资源全覆盖</h3>
+              <p className="text-gray-600">
+                覆盖青海全域户外广告资源，六大分类，精准定位目标受众
+              </p>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <div className="text-4xl mb-4">🔒</div>
+              <h3 className="text-xl font-bold mb-3">价格控制权</h3>
+              <p className="text-gray-600">
+                统一报价体系，避免恶性竞争，保障供应商与客户双赢
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}

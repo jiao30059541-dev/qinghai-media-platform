@@ -1,0 +1,320 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/db';
+import { getUserIdFromToken } from '@/lib/auth';
+
+type ReportType = 'dashboard' | 'user_behavior' | 'media_performance' | 'revenue_trends' | 'recommendation_effectiveness' | 'custom';
+type DateRange = '1d' | '7d' | '30d' | '90d' | '1y' | 'custom';
+type ReportStatus = 'pending' | 'generating' | 'completed' | 'failed';
+type FileFormat = 'json' | 'csv' | 'xlsx' | 'pdf';
+
+interface Report {
+  id: number;
+  title: string;
+  report_type: ReportType;
+  date_range: DateRange;
+  start_date: string | null;
+  end_date: string | null;
+  filters: any;
+  generated_by: number;
+  status: ReportStatus;
+  file_path: string | null;
+  file_format: FileFormat | null;
+  file_size: number | null;
+  summary_data: any;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function getBaseUrl(request: NextRequest): string {
+  const host = request.headers.get('host') || 'localhost:3000';
+  const proto = request.headers.get('x-forwarded-proto') || 'http';
+  return proto + '://' + host;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const userId = await getUserIdFromToken(request);
+    if (!userId && userId !== 0) {
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 });
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('page_size') || '20')));
+    const offset = (page - 1) * pageSize;
+
+    const reportType = searchParams.get('report_type');
+    const status = searchParams.get('status');
+    const startDate = searchParams.get('start_date');
+    const endDate = searchParams.get('end_date');
+    const search = searchParams.get('search');
+    const sortBy = searchParams.get('sort_by') || 'created_at';
+    const sortOrder = searchParams.get('sort_order')?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    const allowedSortFields = ['created_at', 'updated_at', 'title', 'status', 'report_type', 'file_size'];
+    const safeSortField = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
+    const safeSortOrder = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+
+    const whereClauses: string[] = [];
+    const params: any[] = [];
+
+    whereClauses.push('r.generated_by = ?');
+    params.push(userId);
+
+    if (reportType) {
+      whereClauses.push('r.report_type = ?');
+      params.push(reportType);
+    }
+
+    if (status) {
+      whereClauses.push('r.status = ?');
+      params.push(status);
+    }
+
+    if (startDate) {
+      whereClauses.push('r.created_at >= ?');
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      whereClauses.push('r.created_at <= ?');
+      params.push(endDate);
+    }
+
+    if (search) {
+      whereClauses.push('r.title LIKE ?');
+      params.push('%' + search + '%');
+    }
+
+    const whereSQL = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+
+    const countResult = await query(
+      'SELECT COUNT(*) as total FROM reports r ' + whereSQL,
+      params
+    ) as any[];
+    const total = countResult[0]?.total || 0;
+
+    const reports = await query(
+      'SELECT r.* FROM reports r ' + whereSQL + ' ORDER BY r.' + safeSortField + ' ' + safeSortOrder + ' LIMIT ? OFFSET ?',
+      [...params, pageSize, offset]
+    ) as Report[];
+
+    return NextResponse.json({
+      success: true,
+      data: reports,
+      pagination: {
+        page,
+        page_size: pageSize,
+        total,
+        total_pages: Math.ceil(total / pageSize)
+      }
+    });
+
+  } catch (error: any) {
+    console.error('获取报表列表失败:', error);
+    return NextResponse.json(
+      { error: '获取报表列表失败', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const userId = await getUserIdFromToken(request);
+    if (!userId && userId !== 0) {
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { title, report_type, date_range, start_date, end_date, filters, file_format } = body;
+
+    if (!title || !report_type) {
+      return NextResponse.json(
+        { error: '缺少必填字段：title, report_type' },
+        { status: 400 }
+      );
+    }
+
+    const validReportTypes: ReportType[] = ['dashboard', 'user_behavior', 'media_performance', 'revenue_trends', 'recommendation_effectiveness', 'custom'];
+    if (!validReportTypes.includes(report_type)) {
+      return NextResponse.json(
+        { error: '无效的报表类型', valid_types: validReportTypes },
+        { status: 400 }
+      );
+    }
+
+    const validDateRanges: DateRange[] = ['1d', '7d', '30d', '90d', '1y', 'custom'];
+    const effectiveDateRange: DateRange = validDateRanges.includes(date_range) ? date_range : '7d';
+
+    const insertResult = await query(
+      'INSERT INTO reports (title, report_type, date_range, start_date, end_date, filters, generated_by, status, file_format) VALUES (?, ?, ?, ?, ?, ?, ?, 'generating', ?)',
+      [
+        title,
+        report_type,
+        effectiveDateRange,
+        start_date || null,
+        end_date || null,
+        filters ? JSON.stringify(filters) : null,
+        userId,
+        file_format || 'json'
+      ]
+    ) as any;
+
+    const reportId = insertResult.insertId;
+
+    try {
+      const baseUrl = getBaseUrl(request);
+      const analyticsParams = new URLSearchParams();
+      analyticsParams.set('report', report_type);
+      analyticsParams.set('timeframe', effectiveDateRange);
+      if (start_date) analyticsParams.set('start_date', start_date);
+      if (end_date) analyticsParams.set('end_date', end_date);
+
+      const analyticsUrl = baseUrl + '/api/analytics?' + analyticsParams.toString();
+      const analyticsResponse = await fetch(analyticsUrl, {
+        headers: {
+          'Cookie': request.headers.get('cookie') || '',
+          'Authorization': request.headers.get('authorization') || ''
+        },
+        signal: AbortSignal.timeout(30000)
+      });
+
+      if (!analyticsResponse.ok) {
+        throw new Error('Analytics API返回错误: ' + analyticsResponse.status);
+      }
+
+      const analyticsResult = await analyticsResponse.json();
+
+      const summaryData = generateSummary(report_type, analyticsResult.data);
+      const summaryJson = JSON.stringify(summaryData);
+
+      await query(
+        'UPDATE reports SET status = completed, summary_data = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [summaryJson, reportId]
+      );
+
+      const reports = await query('SELECT * FROM reports WHERE id = ?', [reportId]) as Report[];
+      const report = reports[0];
+
+      return NextResponse.json({
+        success: true,
+        message: '报表生成成功',
+        data: {
+          ...report,
+          summary_data: summaryData
+        }
+      });
+
+    } catch (genError: any) {
+      await query(
+        'UPDATE reports SET status = failed, error_message = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [genError.message, reportId]
+      );
+
+      return NextResponse.json(
+        { error: '报表生成失败', details: genError.message, report_id: reportId },
+        { status: 500 }
+      );
+    }
+
+  } catch (error: any) {
+    console.error('创建报表失败:', error);
+    return NextResponse.json(
+      { error: '创建报表失败', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const userId = await getUserIdFromToken(request);
+    if (!userId && userId !== 0) {
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { ids } = body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json(
+        { error: '请提供要删除的报表ID列表（ids数组）' },
+        { status: 400 }
+      );
+    }
+
+    const validIds = ids.filter((id: any) => typeof id === 'number' || !isNaN(parseInt(id)));
+    if (validIds.length === 0) {
+      return NextResponse.json({ error: '无效的报表ID' }, { status: 400 });
+    }
+
+    const placeholders = validIds.map(() => '?').join(',');
+    const deleteResult = await query(
+      'DELETE FROM reports WHERE id IN (' + placeholders + ') AND generated_by = ?',
+      [...validIds, userId]
+    ) as any;
+
+    return NextResponse.json({
+      success: true,
+      message: '成功删除 ' + deleteResult.affectedRows + ' 个报表',
+      deleted_count: deleteResult.affectedRows
+    });
+
+  } catch (error: any) {
+    console.error('删除报表失败:', error);
+    return NextResponse.json(
+      { error: '删除报表失败', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+function generateSummary(reportType: string, data: any): any {
+  if (!data) return {};
+
+  switch (reportType) {
+    case 'dashboard':
+      return {
+        metrics: data.metrics || {},
+        total_revenue: data.revenue?.total_revenue || 0,
+        total_orders: data.revenue?.total_orders || 0,
+        total_users: data.metrics?.total_users || 0,
+        active_media: data.metrics?.active_media || 0
+      };
+
+    case 'user_behavior':
+      return {
+        total_behaviors: data.behavior_summary?.total_behaviors || 0,
+        unique_users: data.behavior_summary?.unique_users || 0,
+        top_behaviors: (data.behavior_summary?.top_behaviors || []).slice(0, 5)
+      };
+
+    case 'media_performance':
+      return {
+        total_media: data.performance_summary?.total_media || 0,
+        total_impressions: data.performance_summary?.total_impressions || 0,
+        avg_ctr: data.performance_summary?.avg_ctr || 0,
+        top_performers: (data.top_performers || []).slice(0, 5)
+      };
+
+    case 'revenue_trends':
+      return {
+        total_revenue: data.revenue_summary?.total_revenue || 0,
+        total_orders: data.revenue_summary?.total_orders || 0,
+        avg_order_value: data.revenue_summary?.avg_order_value || 0,
+        monthly_trend: (data.monthly_trend || []).slice(0, 12)
+      };
+
+    case 'recommendation_effectiveness':
+      return {
+        total_recommendations: data.performance?.length || 0,
+        avg_ctr: data.conversion_rates?.reduce(function(sum: number, r: any) { return sum + (r.ctr || 0); }, 0) / (data.conversion_rates?.length || 1) || 0,
+        top_types: (data.performance || []).slice(0, 5)
+      };
+
+    default:
+      return { raw_data_size: JSON.stringify(data).length };
+  }
+}

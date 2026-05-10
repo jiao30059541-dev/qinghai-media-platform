@@ -1,0 +1,124 @@
+import { Heart, Star, MapPin, Eye } from 'lucide-react'
+import Link from 'next/link'
+
+interface MediaCardProps {
+  media: {
+    id: number
+    name: string
+    city: string
+    address: string
+    list_price: number
+    deal_price: number
+    size: string
+    daily_exposure: number
+    cover_images?: string  // 注意：数据库返回的是cover_images，不是cover_image
+    category_level1: string
+    category_level2?: string
+    supplier_name?: string
+  }
+}
+
+export default function MediaCard({ media }: MediaCardProps) {
+  const discount = media.list_price > 0 
+    ? Math.round((1 - media.deal_price / media.list_price) * 100) 
+    : 0
+  
+  // 处理cover_images字段 - 可能包含多个URL，取第一个
+  const coverImage = media.cover_images ? media.cover_images.split(',')[0] : null
+  
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 group">
+      {/* 图片区域 */}
+      <div className="relative h-64 overflow-hidden">
+        {coverImage ? (
+          <img 
+            src={coverImage} 
+            alt={media.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-4xl mb-2">
+                {media.category_level1 === '户外广告' ? '🏙️' :
+                 media.category_level1 === '社区广告' ? '🏘️' :
+                 media.category_level1 === '商业广告' ? '🏬' :
+                 media.category_level1 === '数字广告' ? '📱' :
+                 media.category_level1 === '交通广告' ? '🚗' : '🎪'}
+              </div>
+              <p className="text-gray-600">{media.category_level1}</p>
+            </div>
+          </div>
+        )}
+        
+        {/* 折扣标签 */}
+        {discount > 0 && (
+          <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full font-bold shadow-lg">
+            约{discount}折
+          </div>
+        )}
+        
+        {/* 收藏按钮 */}
+        <button className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-2 rounded-full hover:bg-white transition-colors">
+          <Heart className="w-5 h-5 text-gray-600 hover:text-red-500" />
+        </button>
+      </div>
+      
+      {/* 内容区域 */}
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="text-xl font-bold text-gray-900 line-clamp-1">{media.name}</h3>
+          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">
+            {media.category_level2 || media.category_level1}
+          </span>
+        </div>
+        
+        <div className="space-y-3 mb-4">
+          <div className="flex items-center text-gray-600">
+            <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span className="truncate">{media.city} · {media.address}</span>
+          </div>
+          
+          {media.supplier_name && (
+            <div className="flex items-center text-gray-600">
+              <Star className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span>供应商: {media.supplier_name}</span>
+            </div>
+          )}
+          
+          <div className="flex items-center text-gray-600">
+            <Eye className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span>日曝光: {media.daily_exposure?.toLocaleString() || 'N/A'} 次</span>
+          </div>
+          
+          <div className="text-sm text-gray-500">
+            尺寸: {media.size || 'N/A'}
+          </div>
+        </div>
+        
+        {/* 价格区域 */}
+        <div className="border-t pt-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-2xl font-bold text-primary">
+                ¥{media.deal_price?.toLocaleString() || '面议'}
+              </div>
+              {media.list_price > 0 && (
+                <div className="text-sm text-gray-500 line-through">
+                  刊例价: ¥{media.list_price.toLocaleString()}
+                </div>
+              )}
+            </div>
+            
+            <Link 
+              href={`/media/${media.id}`}
+              className="bg-primary hover:bg-primary-dark text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+            >
+              查看详情
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

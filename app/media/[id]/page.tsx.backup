@@ -1,0 +1,599 @@
+// app/media/[id]/page.tsx - 重构版本：高端详情页
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { 
+  MapPin, Clock, Eye, Ruler, Tag, Users, CheckCircle, Share2, Heart, 
+  Loader2, AlertCircle, ChevronLeft, ChevronRight, Play, Pause, Maximize2,
+  Star, DollarSign, Target, BarChart3, Calendar, Shield, Download,
+  Phone, MessageSquare, Mail, Navigation, ExternalLink, ArrowRight, Plus
+} from 'lucide-react'
+import { Button } from '@/components/ui/Button'
+import { cn } from '@/lib/utils'
+
+// 相关推荐卡片组件
+function RelatedMediaCard({ item }: { item: any }) {
+  return (
+    <div className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-200">
+      <div className="relative h-48 overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+          style={{ 
+            backgroundImage: `url(${item.image_url || '/media/default.jpg'})`,
+            backgroundSize: 'cover'
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        {item.is_featured && (
+          <div className="absolute top-3 left-3 bg-secondary text-white px-3 py-1 rounded-full text-xs font-semibold">
+            精选推荐
+          </div>
+        )}
+      </div>
+      <div className="p-4">
+        <h3 className="font-bold text-gray-900 mb-2 line-clamp-1">{item.name}</h3>
+        <p className="text-sm text-gray-600 mb-3 flex items-center">
+          <MapPin className="w-3 h-3 mr-1" />
+          {item.city} · {item.category_level2}
+        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="text-lg font-bold text-primary">¥{item.deal_price?.toLocaleString()}</div>
+            <div className="text-xs text-gray-500 line-through">¥{item.list_price?.toLocaleString()}</div>
+          </div>
+          <a 
+            href={`/media/${item.id}`}
+            className="text-sm text-primary hover:text-blue-700 font-medium flex items-center"
+          >
+            查看详情
+            <ArrowRight className="w-3 h-3 ml-1" />
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 图片/视频轮播组件
+function MediaGallery({ assets, mediaName }: { assets: any[], mediaName: string }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  
+  const mediaItems = assets.length > 0 
+    ? assets 
+    : [{ id: 0, url: '/media/default.jpg', type: 'image', title: mediaName }]
+  
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev + 1) % mediaItems.length)
+  }
+  
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length)
+  }
+  
+  return (
+    <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-gray-900 to-gray-800">
+      {/* 主展示区域 */}
+      <div className="relative h-96 md:h-[500px]">
+        {mediaItems[currentIndex]?.type === 'video' ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <video 
+              className="w-full h-full object-cover"
+              controls
+              autoPlay={isPlaying}
+              poster={mediaItems[currentIndex]?.thumbnail}
+            >
+              <source src={mediaItems[currentIndex].url} type="video/mp4" />
+            </video>
+          </div>
+        ) : (
+          <div 
+            className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+            style={{ 
+              backgroundImage: `url(${mediaItems[currentIndex]?.url})`,
+              backgroundSize: 'cover'
+            }}
+          />
+        )}
+        
+        {/* 渐变遮罩 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        
+        {/* 控制按钮 */}
+        <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={prevSlide}
+              className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+            >
+              <ChevronRight className="w-5 h-5 text-white" />
+            </button>
+            <span className="text-white font-medium">
+              {currentIndex + 1} / {mediaItems.length}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <button className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+              <Maximize2 className="w-5 h-5 text-white" />
+            </button>
+            <button className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+              <Share2 className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* 缩略图导航 */}
+      <div className="p-4 bg-gradient-to-t from-black/80 to-transparent">
+        <div className="flex overflow-x-auto gap-3 pb-2">
+          {mediaItems.map((item, index) => (
+            <button
+              key={item.id || index}
+              onClick={() => setCurrentIndex(index)}
+              className={cn(
+                "relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all",
+                currentIndex === index 
+                  ? "border-primary shadow-lg scale-105" 
+                  : "border-transparent opacity-70 hover:opacity-100"
+              )}
+            >
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${item.url})` }}
+              />
+              {item.type === 'video' && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Play className="w-6 h-6 text-white" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// 规格参数组件
+function Specifications({ media }: { media: any }) {
+  const specs = [
+    { icon: MapPin, label: '位置', value: `${media.city} · ${media.address || '详细地址待提供'}` },
+    { icon: Tag, label: '广告类型', value: `${media.category_level1} · ${media.category_level2}` },
+    { icon: Ruler, label: '尺寸规格', value: media.size || '标准尺寸' },
+    { icon: Eye, label: '日曝光量', value: media.daily_exposure ? `${media.daily_exposure.toLocaleString()} 次/日` : '待评估' },
+    { icon: Users, label: '覆盖人群', value: media.target_audience || '大众群体' },
+    { icon: Clock, label: '投放周期', value: media.duration || '灵活可定制' },
+    { icon: BarChart3, label: '人流量', value: media.foot_traffic ? `${media.foot_traffic.toLocaleString()} 人/日` : '高流量区域' },
+    { icon: Target, label: '目标人群', value: media.target_demographic || '全年龄段' },
+  ]
+  
+  return (
+    <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-200">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+        <Ruler className="w-6 h-6 mr-2 text-primary" />
+        规格参数
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {specs.map((spec, index) => (
+          <div key={index} className="flex items-start">
+            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+              <spec.icon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">{spec.label}</h3>
+              <p className="text-gray-600 mt-1">{spec.value}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// 点位信息组件
+function PointsTable({ points }: { points: any[] }) {
+  if (points.length === 0) return null
+  
+  return (
+    <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-200">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+        <MapPin className="w-6 h-6 mr-2 text-primary" />
+        点位分布 ({points.length}个点位)
+      </h2>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="py-3 px-4 text-left text-sm font-semibold text-gray-900 rounded-l-xl">点位名称</th>
+              <th className="py-3 px-4 text-left text-sm font-semibold text-gray-900">具体位置</th>
+              <th className="py-3 px-4 text-left text-sm font-semibold text-gray-900">尺寸</th>
+              <th className="py-3 px-4 text-left text-sm font-semibold text-gray-900">朝向</th>
+              <th className="py-3 px-4 text-left text-sm font-semibold text-gray-900 rounded-r-xl">状态</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {points.map((point, index) => (
+              <tr key={point.id || index} className="hover:bg-gray-50">
+                <td className="py-3 px-4 text-sm text-gray-900">{point.name || `点位 ${index + 1}`}</td>
+                <td className="py-3 px-4 text-sm text-gray-600">{point.location || '--'}</td>
+                <td className="py-3 px-4 text-sm text-gray-600">{point.size || '--'}</td>
+                <td className="py-3 px-4 text-sm text-gray-600">{point.direction || '--'}</td>
+                <td className="py-3 px-4">
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-xs font-medium",
+                    point.status === 'available' 
+                      ? "bg-green-100 text-green-800"
+                      : "bg-gray-100 text-gray-800"
+                  )}>
+                    {point.status === 'available' ? '可投放' : '已预定'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+export default function MediaDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const id = params.id as string
+  
+  const [media, setMedia] = useState<any>(null)
+  const [assets, setAssets] = useState<any[]>([])
+  const [points, setPoints] = useState<any[]>([])
+  const [related, setRelated] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isAddedToPlan, setIsAddedToPlan] = useState(false)
+  const [isLiked, setIsLiked] = useState(false)
+  
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true)
+        const res = await fetch(`/api/media/${id}`)
+        const json = await res.json()
+        if (!json.success) throw new Error(json.message || '获取数据失败')
+        setMedia(json.data)
+        setAssets(json.data.assets || [])
+        setPoints(json.data.points || [])
+        
+        // 模拟获取相关推荐
+        setTimeout(() => {
+          setRelated([
+            {
+              id: 1,
+              name: '西宁火车站LED大屏',
+              city: '西宁',
+              category_level2: 'LED大屏',
+              deal_price: 28000,
+              list_price: 35000,
+              image_url: '/media/led-screen.jpg',
+              is_featured: true
+            },
+            {
+              id: 2,
+              name: '海东商业中心高炮广告',
+              city: '海东',
+              category_level2: '户外大牌',
+              deal_price: 18000,
+              list_price: 22000,
+              image_url: '/media/billboard.jpg'
+            },
+            {
+              id: 3,
+              name: '格尔木高速入口墙体广告',
+              city: '格尔木',
+              category_level2: '墙体广告',
+              deal_price: 15000,
+              list_price: 18000,
+              image_url: '/media/wall-ad.jpg',
+              is_featured: true
+            }
+          ])
+        }, 500)
+      } catch (err: any) {
+        setError(err.message || '加载失败')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [id])
+  
+  const handleAddToPlan = () => {
+    setIsAddedToPlan(true)
+    // 这里可以添加实际添加到投放篮的逻辑
+    setTimeout(() => {
+      alert('已添加到投放方案！')
+    }, 300)
+  }
+  
+  const handleContact = () => {
+    // 联系供应商逻辑
+    alert('即将跳转到联系页面...')
+  }
+  
+  const handleDownloadMediaKit = () => {
+    // 下载媒体资料包逻辑
+    alert('开始下载媒体资料包...')
+  }
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-white">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-6 text-gray-600 text-lg">加载广告位详情中...</p>
+        <p className="text-sm text-gray-500 mt-2">正在获取最新数据和图片</p>
+      </div>
+    )
+  }
+  
+  if (error || !media) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-white">
+        <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">加载失败</h2>
+        <p className="text-gray-600 mb-6">{error || '广告位不存在或已被下架'}</p>
+        <div className="flex gap-4">
+          <Button onClick={() => router.back()}>返回上一页</Button>
+          <Button variant="outline" onClick={() => router.push('/media')}>浏览其他广告位</Button>
+        </div>
+      </div>
+    )
+  }
+  
+  const discount = media.list_price > 0
+    ? Math.round((1 - media.deal_price / media.list_price) * 100)
+    : 0
+  
+  const rating = media.rating || 4.5
+  const reviewCount = media.review_count || 24
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* 返回导航 */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center text-gray-600 hover:text-gray-900"
+          >
+            <ChevronLeft className="w-5 h-5 mr-2" />
+            返回广告资源列表
+          </button>
+        </div>
+      </div>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 左侧主内容区域 */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* 媒体画廊 */}
+            <MediaGallery assets={assets} mediaName={media.name} />
+            
+            {/* 标题和基本信息 */}
+            <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-200">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-6">
+                <div className="flex-1">
+                  <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+                    {media.name}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center text-gray-600">
+                      <MapPin className="w-5 h-5 mr-2 text-primary" />
+                      {media.city} · {media.address || '核心商圈'}
+                    </div>
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <Star 
+                          key={i} 
+                          className={cn(
+                            "w-5 h-5",
+                            i < Math.floor(rating) 
+                              ? "text-amber-500 fill-current" 
+                              : "text-gray-300"
+                          )} 
+                        />
+                      ))}
+                      <span className="ml-2 text-gray-700 font-medium">
+                        {rating.toFixed(1)} ({reviewCount}条评价)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setIsLiked(!isLiked)}
+                    className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      isLiked 
+                        ? "bg-red-50 text-red-500" 
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    )}
+                  >
+                    <Heart className={cn("w-6 h-6", isLiked && "fill-current")} />
+                  </button>
+                  <button className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
+                    <Share2 className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+              
+              {/* 价格和折扣 */}
+              <div className="flex items-center justify-between p-6 bg-gradient-to-r from-primary/5 to-blue-50 rounded-2xl mb-6">
+                <div>
+                  <div className="text-4xl font-bold text-gray-900">
+                    ¥{media.deal_price?.toLocaleString()}
+                    <span className="text-lg text-gray-500 font-normal">/月</span>
+                  </div>
+                  <div className="text-gray-500 line-through mt-1">
+                    刊例价: ¥{media.list_price?.toLocaleString()}
+                  </div>
+                </div>
+                {discount > 0 && (
+                  <div className="bg-red-500 text-white px-6 py-3 rounded-xl">
+                    <div className="text-2xl font-bold">-{discount}%</div>
+                    <div className="text-sm">限时优惠</div>
+                  </div>
+                )}
+              </div>
+              
+              {/* 简要描述 */}
+              <div className="prose prose-lg max-w-none">
+                <p className="text-gray-700 leading-relaxed">
+                  {media.description || '该广告位位于核心商圈，拥有极高的曝光率和精准的目标人群覆盖。适合品牌推广、产品发布、促销活动等多种营销需求。'}
+                </p>
+              </div>
+            </div>
+            
+            {/* 规格参数 */}
+            <Specifications media={media} />
+            
+            {/* 点位分布 */}
+            <PointsTable points={points} />
+            
+            {/* 相关推荐 */}
+            {related.length > 0 && (
+              <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                  <Target className="w-6 h-6 mr-2 text-primary" />
+                  相关推荐
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {related.map((item) => (
+                    <RelatedMediaCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* 右侧悬浮信息栏 */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-6 space-y-6">
+              {/* 操作面板 */}
+              <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">立即行动</h3>
+                
+                <div className="space-y-4">
+                  <Button 
+                    size="lg" 
+                    className="w-full"
+                    onClick={handleAddToPlan}
+                    disabled={isAddedToPlan}
+                  >
+                    {isAddedToPlan ? (
+                      <>
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        已加入方案
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-5 h-5 mr-2" />
+                        加入投放方案
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    className="w-full"
+                    onClick={handleContact}
+                  >
+                    <Phone className="w-5 h-5 mr-2" />
+                    联系供应商
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="lg" 
+                    className="w-full"
+                    onClick={handleDownloadMediaKit}
+                  >
+                    <Download className="w-5 h-5 mr-2" />
+                    下载媒体资料包
+                  </Button>
+                </div>
+                
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-4">供应商信息</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center text-gray-600">
+                      <Shield className="w-4 h-4 mr-3" />
+                      <span>认证供应商</span>
+                    </div>
+                    <div className="flex items-center text-gray-600">
+                      <CheckCircle className="w-4 h-4 mr-3" />
+                      <span>资质齐全</span>
+                    </div>
+                    <div className="flex items-center text-gray-600">
+                      <Clock className="w-4 h-4 mr-3" />
+                      <span>24小时响应</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 联系信息 */}
+              <div className="bg-gradient-to-r from-primary to-blue-600 text-white rounded-3xl p-8">
+                <h3 className="text-xl font-bold mb-6">需要帮助？</h3>
+                <div className="space-y-4">
+                  <button className="w-full flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-xl p-4 hover:bg-white/30 transition-colors">
+                    <MessageSquare className="w-5 h-5 mr-3" />
+                    在线咨询
+                  </button>
+                  <button className="w-full flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-xl p-4 hover:bg-white/30 transition-colors">
+                    <Phone className="w-5 h-5 mr-3" />
+                    电话咨询
+                  </button>
+                  <button className="w-full flex items-center justify-center bg-white/20 backdrop-blur-sm rounded-xl p-4 hover:bg-white/30 transition-colors">
+                    <Mail className="w-5 h-5 mr-3" />
+                    邮件联系
+                  </button>
+                </div>
+              </div>
+              
+              {/* 快速统计 */}
+              <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-200">
+                <h4 className="font-semibold text-gray-900 mb-4">数据概览</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-3 bg-gray-50 rounded-xl">
+                    <div className="text-2xl font-bold text-primary">{media.daily_exposure ? (media.daily_exposure / 10000).toFixed(1) : '--'}</div>
+                    <div className="text-xs text-gray-600">万次日曝光</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-xl">
+                    <div className="text-2xl font-bold text-primary">{rating.toFixed(1)}</div>
+                    <div className="text-xs text-gray-600">用户评分</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-xl">
+                    <div className="text-2xl font-bold text-primary">{points.length}</div>
+                    <div className="text-xs text-gray-600">可用点位</div>
+                  </div>
+                  <div className="text-center p-3 bg-gray-50 rounded-xl">
+                    <div className="text-2xl font-bold text-primary">{discount || 0}%</div>
+                    <div className="text-xs text-gray-600">当前折扣</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

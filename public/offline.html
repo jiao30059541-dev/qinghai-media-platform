@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>离线 - 青海全媒体广告平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .icon {
+            font-size: 80px;
+            margin-bottom: 30px;
+            color: #0ea5e9;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+            margin-bottom: 30px;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+        
+        .feature {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+        
+        .feature h3 {
+            color: #0ea5e9;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .feature p {
+            font-size: 0.95rem;
+            margin-bottom: 0;
+            color: #94a3b8;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(14, 165, 233, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            background: rgba(234, 179, 8, 0.1);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            border-radius: 12px;
+            color: #fbbf24;
+        }
+        
+        @media (max-width: 640px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📡</div>
+        <h1>网络连接已断开</h1>
+        <p>您当前处于离线状态。青海全媒体广告平台的部分功能需要网络连接才能正常使用。</p>
+        
+        <div class="features">
+            <div class="feature">
+                <h3>📱 离线功能</h3>
+                <p>您仍然可以浏览已缓存的广告资源、查看投放篮和访问个人资料。</p>
+            </div>
+            <div class="feature">
+                <h3>🔄 自动同步</h3>
+                <p>当网络恢复时，您的操作将自动同步到服务器。</p>
+            </div>
+            <div class="feature">
+                <h3>🔔 实时通知</h3>
+                <p>网络恢复后，您将收到相关通知。</p>
+            </div>
+        </div>
+        
+        <div class="status">
+            <p>💡 <strong>提示：</strong> 请检查您的网络连接，或尝试以下操作：</p>
+        </div>
+        
+        <div class="actions">
+            <button class="btn btn-primary" onclick="window.location.reload()">
+                🔄 重新加载
+            </button>
+            <button class="btn btn-secondary" onclick="goToHome()">
+                🏠 返回首页
+            </button>
+            <button class="btn btn-secondary" onclick="checkConnection()">
+                📶 检查连接
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function goToHome() {
+            if ('caches' in window) {
+                caches.match('/')
+                    .then(response => {
+                        if (response) {
+                            window.location.href = '/';
+                        } else {
+                            window.location.href = '/';
+                        }
+                    })
+                    .catch(() => {
+                        window.location.href = '/';
+                    });
+            } else {
+                window.location.href = '/';
+            }
+        }
+        
+        function checkConnection() {
+            const statusEl = document.querySelector('.status');
+            if (navigator.onLine) {
+                statusEl.innerHTML = `
+                    <p>✅ <strong>连接恢复！</strong> 网络连接已恢复，页面将自动刷新...</p>
+                `;
+                statusEl.style.background = 'rgba(34, 197, 94, 0.1)';
+                statusEl.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                statusEl.style.color = '#4ade80';
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                statusEl.innerHTML = `
+                    <p>❌ <strong>仍然离线</strong> 请检查您的网络设置或Wi-Fi连接。</p>
+                `;
+                statusEl.style.background = 'rgba(239, 68, 68, 0.1)';
+                statusEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                statusEl.style.color = '#f87171';
+            }
+        }
+        
+        // 监听网络状态变化
+        window.addEventListener('online', () => {
+            checkConnection();
+        });
+        
+        window.addEventListener('offline', () => {
+            const statusEl = document.querySelector('.status');
+            statusEl.innerHTML = `
+                <p>⚠️ <strong>网络断开</strong> 您已切换到离线模式。</p>
+            `;
+            statusEl.style.background = 'rgba(234, 179, 8, 0.1)';
+            statusEl.style.borderColor = 'rgba(234, 179, 8, 0.3)';
+            statusEl.style.color = '#fbbf24';
+        });
+        
+        // 初始检查
+        checkConnection();
+    </script>
+</body>
+</html>

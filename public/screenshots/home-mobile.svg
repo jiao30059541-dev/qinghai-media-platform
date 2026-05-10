@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="1334" viewBox="0 0 750 1334">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+  <rect width="750" height="1334" fill="url(#gradient)"/>
+  <text x="375" y="667" text-anchor="middle" dy=".3em" 
+        font-family="Arial, sans-serif" font-size="36" 
+        fill="white" font-weight="bold">
+    <tspan x="375" dy="-30">青海全媒体广告平台</tspan>
+    <tspan x="375" dy="60">移动端截图</tspan>
+  </text>
+</svg>

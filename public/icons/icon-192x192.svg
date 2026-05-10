@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <rect width="192" height="192" fill="#0f172a" rx="192"/>
+  <circle cx="96" cy="96" r="64" fill="#0ea5e9"/>
+  <text x="96" y="96" text-anchor="middle" dy=".3em" 
+        font-family="Arial, sans-serif" font-size="48" 
+        fill="white" font-weight="bold">青</text>
+</svg>
