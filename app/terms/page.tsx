@@ -39,7 +39,7 @@ export default function TermsPage() {
             </div>
             <div>
               <h1 className="text-4xl font-bold text-gray-900">用户协议</h1>
-              <p className="text-gray-500 mt-1">最后更新：2024年4月</p>
+              <p className="text-gray-500 mt-1">最后更新：2026年7月</p>
             </div>
           </div>
 
@@ -47,7 +47,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">一、总则</h2>
               <p className="text-gray-600 leading-relaxed">
-                欢迎使用青海全媒体广告智能投放平台（以下简称"本平台"）。本平台由青海全媒体科技有限公司运营。
+                欢迎使用青海全媒体广告智能投放平台（以下简称"本平台"）。本平台由西宁名扬天下文化传媒有限公司运营。
                 用户（以下简称"您"）在使用本平台服务前，请仔细阅读并充分理解本协议的全部内容。
                 您注册、登录、使用本平台服务，即表示您已阅读、理解并接受本协议的全部条款。
               </p>
@@ -86,7 +86,7 @@ export default function TermsPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">五、知识产权</h2>
               <p className="text-gray-600 leading-relaxed">
                 本平台所有的软件、技术、设计、文字、图标、图片、音频、视频等内容的
-                知识产权归青海全媒体科技有限公司所有，未经书面许可，任何单位或个人不得擅自使用、复制、修改、传播。
+                知识产权归西宁名扬天下文化传媒有限公司所有，未经书面许可，任何单位或个人不得擅自使用、复制、修改、传播。
               </p>
             </section>
 
@@ -118,7 +118,7 @@ export default function TermsPage() {
 
             <div className="pt-6 border-t border-gray-100">
               <p className="text-gray-400 text-sm text-center">
-                青海全媒体科技有限公司 | 地址：青海省西宁市城西区 | 客服电话：0971-8888888
+                西宁名扬天下文化传媒有限公司 | 地址：青海省西宁市城西区 | 客服电话：0971-8888888
               </p>
             </div>
           </div>

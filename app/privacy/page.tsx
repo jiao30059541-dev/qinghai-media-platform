@@ -38,7 +38,7 @@ export default function PrivacyPage() {
             </div>
             <div>
               <h1 className="text-4xl font-bold text-gray-900">隐私政策</h1>
-              <p className="text-gray-500 mt-1">最后更新：2024年4月</p>
+              <p className="text-gray-500 mt-1">最后更新：2026年7月</p>
             </div>
           </div>
 

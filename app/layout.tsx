@@ -4,6 +4,7 @@ import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Script from 'next/script'
+import FloatingContact from '@/components/FloatingContact'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -37,10 +38,10 @@ export const metadata: Metadata = {
     siteName: '青海全媒体广告平台',
     title: '青海全媒体广告智能投放平台',
     description: 'AI驱动的智能广告投放平台，覆盖青海全域户外广告资源。在线查询、比价、组合投放广告位。',
-    url: 'https://www.xnmytx.com',
+    url: 'https://www.qhqmt.cn',
     images: [
       {
-        url: 'https://www.xnmytx.com/icons/icon-512x512.svg',
+        url: 'https://www.qhqmt.cn/icons/icon-512x512.svg',
         width: 512,
         height: 512,
         alt: '青海全媒体广告平台',
@@ -51,10 +52,10 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: '青海全媒体广告智能投放平台',
     description: 'AI驱动的智能广告投放平台，覆盖青海全域户外广告资源',
-    images: ['https://www.xnmytx.com/icons/icon-512x512.svg'],
+    images: ['https://www.qhqmt.cn/icons/icon-512x512.svg'],
   },
   alternates: {
-    canonical: 'https://www.xnmytx.com',
+    canonical: 'https://www.qhqmt.cn',
   },
   verification: {
     // 后续可添加百度/Google站长验证
@@ -76,10 +77,10 @@ export default function RootLayout({
     '@graph': [
       {
         '@type': 'Organization',
-        '@id': 'https://www.xnmytx.com/#organization',
+        '@id': 'https://www.qhqmt.cn/#organization',
         name: '西宁名扬天下文化传媒有限公司',
-        url: 'https://www.xnmytx.com',
-        logo: 'https://www.xnmytx.com/icons/icon-192x192.svg',
+        url: 'https://www.qhqmt.cn',
+        logo: 'https://www.qhqmt.cn/icons/icon-192x192.svg',
         description: '青海全媒体广告智能投放平台，AI驱动的广告资源交易平台',
         contactPoint: {
           '@type': 'ContactPoint',
@@ -96,26 +97,26 @@ export default function RootLayout({
       },
       {
         '@type': 'WebSite',
-        '@id': 'https://www.xnmytx.com/#website',
-        url: 'https://www.xnmytx.com',
+        '@id': 'https://www.qhqmt.cn/#website',
+        url: 'https://www.qhqmt.cn',
         name: '青海全媒体广告智能投放平台',
         description: 'AI驱动的智能广告投放平台，覆盖青海全域户外广告资源',
         publisher: {
-          '@id': 'https://www.xnmytx.com/#organization',
+          '@id': 'https://www.qhqmt.cn/#organization',
         },
         inLanguage: 'zh-CN',
       },
       {
         '@type': 'WebPage',
-        '@id': 'https://www.xnmytx.com/#webpage',
-        url: 'https://www.xnmytx.com',
+        '@id': 'https://www.qhqmt.cn/#webpage',
+        url: 'https://www.qhqmt.cn',
         name: '青海全媒体广告智能投放平台',
         description: '一站式查询、组合、策划全省广告资源，AI智能推荐青海户外广告位',
         isPartOf: {
-          '@id': 'https://www.xnmytx.com/#website',
+          '@id': 'https://www.qhqmt.cn/#website',
         },
         about: {
-          '@id': 'https://www.xnmytx.com/#organization',
+          '@id': 'https://www.qhqmt.cn/#organization',
         },
       },
     ],
@@ -142,6 +143,7 @@ export default function RootLayout({
           {children}
         </main>
         <Footer />
+        <FloatingContact />
       </body>
     </html>
   )

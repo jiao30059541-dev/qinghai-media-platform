@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export default function Footer() {
   return (
     <footer className="bg-gray-800 text-white py-12">
@@ -41,7 +43,13 @@ export default function Footer() {
         </div>
         
         <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-500 text-sm">
-          <p>© 2026 青海全媒体广告智能投放平台 | 备案号: 青ICP备2024002834号</p>
+          <div className="flex justify-center gap-6 mb-4">
+            <Link href="/privacy" className="hover:text-white transition-colors">隐私政策</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">用户协议</Link>
+            <Link href="/about" className="hover:text-white transition-colors">关于我们</Link>
+            <Link href="/articles" className="hover:text-white transition-colors">投放研究</Link>
+          </div>
+          <p>(C) 2026 青海全媒体广告智能投放平台 | 备案号: 青ICP备2024002834号</p>
           <p className="mt-2">本平台所有广告资源信息均由供应商提供，价格仅供参考</p>
         </div>
       </div>
