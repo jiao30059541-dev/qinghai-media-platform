@@ -43,3 +43,4 @@ Thumbs.db
 # Misc
 .next/
 coverage/
+tsconfig.tsbuildinfo
