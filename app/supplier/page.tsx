@@ -216,7 +216,7 @@ export default function SupplierEntryPage() {
                     type="password"
                     value={loginForm.password}
                     onChange={e => setLoginForm({...loginForm, password: e.target.value})}
-                    placeholder="默认密码为手机号后6位"
+                    placeholder="请输入登录密码"
                     required
                     className="w-full rounded-2xl"
                   />
@@ -242,7 +242,7 @@ export default function SupplierEntryPage() {
                   还没有账号？<button onClick={() => { setTab('register'); setLoginError('') }} className="text-primary font-medium hover:underline">立即入驻</button>
                 </p>
                 <p className="text-center text-xs text-gray-400 mt-2">
-                  默认密码为注册时填写的手机号后6位
+                  请联系平台管理员获取登录密码
                 </p>
               </div>
             </div>

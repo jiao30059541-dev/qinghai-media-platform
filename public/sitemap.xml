@@ -3,109 +3,11 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
         http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-  
-  <!-- 首页 - 最高优先级 -->
-  <url>
-    <loc>https://www.xnmytx.com/</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  
-  <!-- 广告资源库 - 核心内容页 -->
-  <url>
-    <loc>https://www.xnmytx.com/media</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  
-  <!-- AI方案生成 -->
-  <url>
-    <loc>https://www.xnmytx.com/ai-chat</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <!-- 投放方案 -->
-  <url>
-    <loc>https://www.xnmytx.com/plan</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <!-- 投放案例 - SEO 重点 -->
-  <url>
-    <loc>https://www.xnmytx.com/cases</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <!-- 投放研究/文章 - SEO 重点 -->
-  <url>
-    <loc>https://www.xnmytx.com/articles</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  
-  <!-- 关于平台 -->
-  <url>
-    <loc>https://www.xnmytx.com/about</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  
-  <!-- 供应商后台入口 -->
-  <url>
-    <loc>https://www.xnmytx.com/supplier</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  
-  <!-- 登录 -->
-  <url>
-    <loc>https://www.xnmytx.com/login</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  
-  <!-- 注册 -->
-  <url>
-    <loc>https://www.xnmytx.com/register</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  
-  <!-- 隐私政策 -->
-  <url>
-    <loc>https://www.xnmytx.com/privacy</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  
-  <!-- 服务条款 -->
-  <url>
-    <loc>https://www.xnmytx.com/terms</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  
-  <!-- 后台管理 -->
-  <url>
-    <loc>https://www.xnmytx.com/admin</loc>
-    <lastmod>2026-05-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  
+  <url><loc>https://www.xnmytx.com/</loc><lastmod>2026-05-20</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://www.xnmytx.com/media</loc><lastmod>2026-05-20</lastmod><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.xnmytx.com/ai-chat</loc><lastmod>2026-05-20</lastmod><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://www.xnmytx.com/cases</loc><lastmod>2026-05-20</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.xnmytx.com/articles</loc><lastmod>2026-05-20</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.xnmytx.com/about</loc><lastmod>2026-05-20</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.xnmytx.com/register</loc><lastmod>2026-05-20</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>
