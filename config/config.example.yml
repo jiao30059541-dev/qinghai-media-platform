@@ -38,14 +38,17 @@ mediaserver:
   apikey: "__ENCRYPTED__"          # Jellyfin API Key (加密)
   music_library: true              # 是否创建音乐媒体库
 
-# 站点 (PT)
+# 站点 (PT) - 支持多站点，降低单站封号风险
 sites:
-  - name: "zmpt"                   # 织梦
+  - name: "zmpt"                   # 织梦 (主站)
     url: "https://zmpt.cc"
     cookie: "__ENCRYPTED__"        # 站点 Cookie (加密)
     auth_level: 1
-  # - name: "pttime"              # PT时间 (备援站点,可扩展)
+  # - name: "pttime"              # PT时间 (备援站点)
   #   url: "https://www.pttime.org"
+  #   cookie: "__ENCRYPTED__"
+  # - name: "other"               # 其他备援站 (馒头/猫站/学校等)
+  #   url: "https://example.com"
   #   cookie: "__ENCRYPTED__"
 
 # 豆瓣点播

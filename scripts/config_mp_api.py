@@ -129,21 +129,34 @@ def configure_scraper(host, token):
     log(f"  Scraper: {r.status_code} {r.text[:200]}")
     return r.status_code in (200, 201)
 
-def configure_sites(host, token, zmpt_cookie):
-    """配置织梦站点 cookie"""
-    log("配置站点 (织梦)...")
-    if not zmpt_cookie or zmpt_cookie == "__ENCRYPTED__":
-        log("  未提供 cookie，跳过站点配置")
-        return True
-    site = {
+def configure_sites(host, token, zmpt_cookie, extra_sites=None):
+    """配置 PT 站点 (织梦 + 可选备援站点) - 降低单站封号风险"""
+    sites_list = [{
         "name": "zmpt",
         "url": "https://zmpt.cc",
         "cookie": zmpt_cookie,
         "enabled": True
-    }
-    r = api_post(host, token, "/site/", site)
-    log(f"  Site: {r.status_code} {r.text[:200]}")
-    return r.status_code in (200, 201)
+    }]
+    if extra_sites:
+        for s in extra_sites:
+            if s.get('cookie') and s['cookie'] != '__ENCRYPTED__':
+                sites_list.append({
+                    "name": s.get('name', 'site'),
+                    "url": s.get('url', ''),
+                    "cookie": s['cookie'],
+                    "enabled": True
+                })
+    ok_all = True
+    for site in sites_list:
+        if not site['cookie'] or site['cookie'] == '__ENCRYPTED__':
+            log(f"  {site['name']}: 未提供 cookie，跳过")
+            continue
+        log(f"配置站点 {site['name']}...")
+        r = api_post(host, token, "/site/", site)
+        log(f"  {site['name']}: {r.status_code} {r.text[:150]}")
+        if r.status_code not in (200, 201):
+            ok_all = False
+    return ok_all
 
 def configure_douban(host, token, user_id):
     """配置豆瓣点播插件"""
@@ -179,6 +192,7 @@ def main():
     ap.add_argument('--jf-host', default='http://jellyfin:8096/')
     ap.add_argument('--jf-key', default='')
     ap.add_argument('--zmpt-cookie', default='')
+    ap.add_argument('--extra-sites', default='', help='额外站点 JSON: [{"name":"xx","url":"xx","cookie":"xx"}]')
     ap.add_argument('--douban-user', default='276778617')
     args = ap.parse_args()
 
@@ -187,12 +201,18 @@ def main():
         log("❌ 登录失败，无法配置")
         sys.exit(1)
 
+    extra = []
+    if args.extra_sites:
+        try:
+            extra = json.loads(args.extra_sites)
+        except Exception as ex:
+            log(f"extra-sites 解析失败: {ex}")
     results = {
         "downloader": configure_downloader(args.host, token, args.qb_host, args.qb_user, args.qb_pass),
         "mediaserver": configure_mediaserver(args.host, token, args.jf_host, args.jf_key),
         "directories": configure_directories(args.host, token),
         "scraper": configure_scraper(args.host, token),
-        "sites": configure_sites(args.host, token, args.zmpt_cookie),
+        "sites": configure_sites(args.host, token, args.zmpt_cookie, extra),
         "douban": configure_douban(args.host, token, args.douban_user),
     }
     log("配置结果汇总:")
