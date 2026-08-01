@@ -213,10 +213,32 @@ phase_config() {
   done
 
   # 调用 Python 配置脚本
+  # 多站点: 从 config.yml 提取所有站点 cookie (sites 列表)
+  local EXTRA_SITES=""
+  # 简单解析: 收集所有 name/url/cookie 三元组 (每站点一块)
+  python3 - "$CONFIG_FILE" << 'PYEOF' > /tmp/extra_sites.json 2>/dev/null || true
+import sys, re, json, yaml
+try:
+    with open(sys.argv[1], encoding='utf-8') as f:
+        cfg = yaml.safe_load(f)
+    sites = cfg.get('sites', [])
+    extras = []
+    for s in sites:
+        if s.get('name', '') != 'zmpt' and s.get('cookie') and s.get('cookie') != '__ENCRYPTED__':
+            extras.append({'name': s['name'], 'url': s.get('url',''), 'cookie': s['cookie']})
+    print(json.dumps(extras, ensure_ascii=False))
+except Exception:
+    print('[]')
+PYEOF
+  if [[ -s /tmp/extra_sites.json ]] && grep -q '^\[' /tmp/extra_sites.json; then
+    EXTRA_SITES=$(cat /tmp/extra_sites.json)
+  fi
+
   python3 "${SCRIPT_DIR}/scripts/config_mp_api.py" \
     --host "${MP_HOST}" --user "${SUPERUSER}" --pass "${SUPERPWD}" \
     --qb-host "${QB_HOST}" --qb-user "${QB_USER}" --qb-pass "${QB_PWD}" \
     --jf-host "${JF_HOST}" --jf-key "${JF_KEY}" \
+    --extra-sites "${EXTRA_SITES}" \
     --zmpt-cookie "${ZMPT_COOKIE}" || warn "API 配置脚本执行异常"
 }
 
