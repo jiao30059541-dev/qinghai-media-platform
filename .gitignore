@@ -1,0 +1,13 @@
+# 敏感文件 - 禁止提交
+config/config.yml
+config/.secret.key
+*.enc.bak
+install.log
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc

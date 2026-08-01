@@ -1,0 +1,23 @@
+# Lidarr 音乐自动化下载管理
+# 关键: /downloads 下载中转 + /music 音乐库 (与 Navidrome 扫描目录对接)
+services:
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: always
+    ports:
+      - "8686:8686"
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Asia/Shanghai
+    volumes:
+      - /vol1/1000/docker/lidarr:/config
+      - /vol2/1000/music/下载中:/downloads   # 下载中转
+      - /vol2/1000/music/音乐库:/music       # 音乐库 (Navidrome 扫描此目录)
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    external: true

@@ -1,0 +1,42 @@
+# MoviePilot v2 影视自动化 (bridge 网络 + extra_hosts 打通 qB)
+# 关键:
+# 1. extra_hosts: qbittorrent:host-gateway 让容器可访问 host 网络的 qB
+# 2. MOVIEPILOT_AUTO_UPDATE=none 禁用自动升级 (防止 pip 卡死)
+# 3. TMDB_API_DOMAIN=api.tmdb.org 国内可达
+services:
+  moviepilot-v2:
+    image: jxxghp/moviepilot-v2:latest
+    container_name: moviepilot-v2
+    hostname: moviepilot-v2
+    restart: always
+    ports:
+      - "3000:3000"   # Web
+      - "3001:3001"   # API
+    extra_hosts:
+      - "qbittorrent:host-gateway"
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - /vol1/1000/docker/moviepilot-v2:/config
+      - /vol1/1000/media:/media
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - NGINX_PORT=3000
+      - PORT=3001
+      - PUID=0
+      - PGID=0
+      - UMASK=000
+      - TZ=Asia/Shanghai
+      - SUPERUSER=admin
+      - SUPERUSER_PASSWORD=CHANGE_ME        # 部署脚本自动注入
+      - MOVIEPILOT_AUTO_UPDATE=none          # 禁用自动升级
+      - TMDB_API_DOMAIN=api.tmdb.org         # 国内可达 TMDB 域名
+      - COOKIECLOUD_HOST=                    # 站点 Cookie 同步 (可选)
+      - COOKIECLOUD_KEY=
+      - COOKIECLOUD_PASSWORD=
+    networks:
+      - default
+      - media-network
+
+networks:
+  media-network:
+    external: true

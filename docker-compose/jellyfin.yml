@@ -1,0 +1,26 @@
+# Jellyfin 媒体服务器 (bridge 网络)
+# 关键: /vol1/1000/media/link -> /media (与 MoviePilot 整理目标一致)
+#       /vol2/1000/music -> /music (音乐库)
+services:
+  jellyfin:
+    image: nyanmisaka/jellyfin:latest   # 国内优化版(含中文字体/显卡驱动)
+    container_name: jellyfin
+    restart: always
+    ports:
+      - "8096:8096"
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Asia/Shanghai
+    volumes:
+      - /vol1/1000/docker/jellyfin:/config
+      - /vol1/1000/media/link:/media        # 影视媒体库
+      - /vol2/1000/music:/music             # 音乐媒体库
+    devices:
+      - /dev/dri:/dev/dri                   # 核显硬解 (如 CPU 支持)
+    networks:
+      - media-network
+
+networks:
+  media-network:
+    external: true

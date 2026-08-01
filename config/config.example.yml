@@ -1,0 +1,71 @@
+# =============================================================================
+# fnOS 影视+音乐 一键部署配置模板
+# 复制本文件为 config.yml 并填写实际值。
+# 敏感字段(密码/Cookie)以 __ENCRYPTED__ 占位，使用 scripts/encrypt_config.py 加密。
+# 用法: python3 scripts/encrypt_config.py encrypt -i config.yml -o config.yml.enc
+#       python3 scripts/encrypt_config.py decrypt -i config.yml.enc -o config.yml
+# =============================================================================
+
+# 路径规划
+paths:
+  base_dir: "/vol1/1000"           # 数据根目录
+  media_dir: "/vol1/1000/media"    # 媒体目录（downloads 下载 + link 整理）
+  music_dir: "/vol2/1000/music"    # 音乐目录（下载中 + 音乐库）
+
+# 网络
+network:
+  shared_net: "media-network"      # 容器共享网络
+
+# MoviePilot
+moviepilot:
+  host: "127.0.0.1"                # MoviePilot 访问地址
+  username: "admin"                # 超级管理员用户名
+  password: "__ENCRYPTED__"        # 超级管理员密码 (加密)
+  api_token: "__ENCRYPTED__"       # API Token (加密)
+
+# 下载器 (qBittorrent)
+downloader:
+  type: "qbittorrent"
+  host: "http://qbittorrent:8080/" # 容器内访问地址 (host 网络容器用 extra_hosts)
+  username: "admin"
+  password: "__ENCRYPTED__"        # (加密)
+  pt_compliance: true              # 是否启用 PT 合规配置(关DHT/做种72h)
+
+# 媒体服务器
+mediaserver:
+  type: "jellyfin"                 # jellyfin / fnos(飞牛影视)
+  host: "http://jellyfin:8096/"    # 容器内访问地址
+  apikey: "__ENCRYPTED__"          # Jellyfin API Key (加密)
+  music_library: true              # 是否创建音乐媒体库
+
+# 站点 (PT)
+sites:
+  - name: "zmpt"                   # 织梦
+    url: "https://zmpt.cc"
+    cookie: "__ENCRYPTED__"        # 站点 Cookie (加密)
+    auth_level: 1
+  # - name: "pttime"              # PT时间 (备援站点,可扩展)
+  #   url: "https://www.pttime.org"
+  #   cookie: "__ENCRYPTED__"
+
+# 豆瓣点播
+douban:
+  enabled: true
+  user_id: "276778617"             # 豆瓣用户ID
+  days: 365                        # 同步窗口(天)
+  cron: "30 0 * * *"               # 每日00:30同步
+  search_download: true            # 想看自动搜索下载
+
+# 刮削
+scraper:
+  tmdb_domain: "api.tmdb.org"      # TMDB API 域名(国内可达)
+  language: "zh-CN"
+  nfo: true                        # 生成 NFO
+  poster: true                     # 下载海报
+  backdrop: true                   # 下载背景图
+
+# 通知 (可选)
+notification:
+  type: "none"                     # none / telegram / wechat
+  # telegram_token: "__ENCRYPTED__"
+  # telegram_chat_id: ""
