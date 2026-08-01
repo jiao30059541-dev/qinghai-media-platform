@@ -33,11 +33,13 @@ def run_ssh(cmd):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--host', default='127.0.0.1')
+    ap.add_argument('--host', default='127.0.0.1')          # MoviePilot 地址
+    ap.add_argument('--nas-host', default='10.0.0.8')       # NAS 局域网 IP (qB/Jellyfin/Lidarr)
     ap.add_argument('--mp-user', default='admin')
     ap.add_argument('--mp-pass', default='')
     args = ap.parse_args()
     host = args.host
+    nas = args.nas_host
 
     print("=" * 50)
     print("fnOS 全链路验收")
@@ -76,10 +78,10 @@ def main():
     # 3. qBittorrent
     print("\n[3] qBittorrent")
     try:
-        r = session.post("http://10.0.0.8:8080/api/v2/auth/login",
+        r = session.post(f"http://{nas}:8080/api/v2/auth/login",
                          data="username=admin&password=adminadmin", timeout=15)
         check("qBittorrent 登录", r.status_code == 200 and r.text == "Ok.", r.text[:50])
-        r2 = session.get("http://10.0.0.8:8080/api/v2/torrents/info", timeout=15)
+        r2 = session.get(f"http://{nas}:8080/api/v2/torrents/info", timeout=15)
         if r2.status_code == 200:
             check("qBittorrent 种子", True, f"{len(r2.json())} 个任务")
     except Exception as ex:
@@ -88,7 +90,7 @@ def main():
     # 4. Jellyfin
     print("\n[4] Jellyfin")
     try:
-        r = session.get("http://10.0.0.8:8096/System/Info/Public", timeout=15)
+        r = session.get(f"http://{nas}:8096/System/Info/Public", timeout=15)
         if r.status_code == 200:
             info = r.json()
             check("Jellyfin", True, f"v{info.get('Version','?')}")
@@ -100,7 +102,7 @@ def main():
     # 5. Lidarr
     print("\n[5] Lidarr")
     try:
-        r = session.get("http://10.0.0.8:8686/ping", timeout=15)
+        r = session.get(f"http://{nas}:8686/ping", timeout=15)
         check("Lidarr", r.status_code == 200, f"HTTP {r.status_code}")
     except Exception as ex:
         check("Lidarr", False, str(ex))
