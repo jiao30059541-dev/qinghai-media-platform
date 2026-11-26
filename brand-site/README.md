@@ -106,17 +106,25 @@ SQLite 的 `prisma/data` 目录与 `*.db` 已排除在 Git 之外。生产环境
 建议独立 PM2 进程，不覆盖现有 `qhqmt.cn` 与 `qinghai-media` 服务：
 
 ```bash
-cd /var/www/xnmytx-brand
+cd /opt/xnmytx-brand/brand-site
 npm ci
 npx prisma generate
 npm run db:migrate
 npm run db:seed
 npm run build
-pm2 start npm --name xnmytx-brand -- run start
+pm2 start deploy/ecosystem.config.cjs
 pm2 save
 ```
 
-Nginx 将 `www.xnmytx.com` 与裸域名代理到 `127.0.0.1:3006`，保留 `/var/www/xnmytx-site` 旧站文件用于回滚。
+将 `deploy/nginx-ai-ads.conf` 部署为 Nginx 站点配置。它会把 `www.xnmytx.com` 与裸域名代理到 `127.0.0.1:3006`，保留 `/var/www/xnmytx-site` 旧站文件用于回滚。
+
+生产数据库建议使用绝对路径：
+
+```dotenv
+DATABASE_URL="file:/opt/xnmytx-brand/brand-site/prisma/data/brand.db"
+```
+
+`public/uploads` 与 `prisma/data` 必须在发布时保留，不能随代码目录一起覆盖。
 
 ## 上线检查
 
