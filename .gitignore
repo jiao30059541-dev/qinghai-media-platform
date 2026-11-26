@@ -25,6 +25,8 @@ __pycache__/
 
 # Uploads / User content
 uploads/
+!brand-site/public/uploads/
+!brand-site/public/uploads/.gitkeep
 
 # IDE
 .idea/

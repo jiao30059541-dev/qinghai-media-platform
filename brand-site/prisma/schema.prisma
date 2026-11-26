@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Screen {
+  id             Int           @id @default(autoincrement())
+  slug           String        @unique
+  name           String
+  shortName      String
+  role           String
+  location       String
+  area           String
+  displaySize    String
+  resolution     String
+  pixelPitch     String
+  brightness     String?
+  operatingHours String?
+  dailyPlays     String?
+  description    String
+  highlights     String
+  heroImage      String
+  galleryImages  String
+  mapUrl         String?
+  sortOrder      Int           @default(0)
+  status         String        @default("published")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  pricingPlans   PricingPlan[]
+  cases          CaseStudy[]
+}
+
+model PricingPlan {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  screenSlug  String
+  name        String
+  duration    String
+  frequency   String
+  period      String
+  price       Int?
+  priceLabel  String   @default("询价")
+  description String?
+  sortOrder   Int      @default(0)
+  status      String   @default("published")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  screen      Screen?  @relation(fields: [screenSlug], references: [slug])
+}
+
+model CaseStudy {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique
+  title       String
+  client      String?
+  category    String
+  summary     String
+  challenge   String
+  solution    String
+  result      String
+  coverImage  String
+  mediaSlug   String?
+  featured    Boolean  @default(false)
+  status      String   @default("published")
+  publishedAt DateTime @default(now())
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  screen      Screen?  @relation(fields: [mediaSlug], references: [slug])
+}
+
+model Article {
+  id             Int       @id @default(autoincrement())
+  slug           String    @unique
+  title          String
+  excerpt        String
+  content        String
+  category       String
+  coverImage     String?
+  status         String    @default("draft")
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Partner {
+  id         Int     @id @default(autoincrement())
+  name       String
+  category   String
+  website    String?
+  logo       String?
+  authorized Boolean @default(false)
+  sortOrder  Int     @default(0)
+  status     String  @default("published")
+}
+
+model Lead {
+  id             Int      @id @default(autoincrement())
+  name           String
+  phone          String
+  company        String?
+  screenInterest String?
+  campaignDate   String?
+  budget         String?
+  message        String?
+  source         String   @default("website")
+  status         String   @default("new")
+  notificationStatus String @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AvailabilityDay {
+  id            Int      @id @default(autoincrement())
+  date          String   @unique
+  guomaoStatus  String   @default("ask")
+  hengrunStatus String   @default("ask")
+  note          String?
+  status        String   @default("published")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model PageSeo {
+  id          Int      @id @default(autoincrement())
+  path        String   @unique
+  title       String
+  description String
+  keywords    String
+  ogImage     String?
+  noindex     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+}
+
+model SiteSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
