@@ -24,12 +24,12 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="min-h-screen">
-      {/* Hero Section - 全屏视频背景 */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+      {/* Hero Section - 全屏动态背景 */}
+      <section className="relative flex min-h-[calc(100svh-5rem)] items-start justify-center overflow-hidden px-4 py-16 lg:items-center lg:py-20">
         <HeroVideo />
         
         {/* 内容区域 */}
-        <div className="relative z-10 text-center px-4 max-w-6xl mx-auto">
+        <div className="relative z-10 mx-auto max-w-6xl text-center">
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-tight">
             青海全媒体广告
             <span className="block text-4xl md:text-6xl mt-4">
